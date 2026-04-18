@@ -1,0 +1,53 @@
+/* ===== ХЛЕБНЫЕ КРОШКИ ===== */
+.breadcrumbs {
+    margin: 1.5rem 0 0.5rem;
+    font-size: 0.9rem;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.breadcrumbs a {
+    text-decoration: none;
+    color: var(--muted);
+    transition: color 0.2s;
+    border-bottom: 1px solid transparent;
+}
+
+.breadcrumbs a:hover {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+}
+
+.breadcrumbs span {
+    color: var(--text);
+    font-weight: 500;
+}
+
+/* Разделитель (можно использовать символ / или › ) */
+.breadcrumbs .separator {
+    color: var(--border);
+    user-select: none;
+    margin: 0 0.2rem;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .breadcrumbs {
+        margin: 1rem 0 0.25rem;
+        font-size: 0.85rem;
+    }
+}
+
+/* Тёмная тема */
+body.dark-theme .breadcrumbs a {
+    color: var(--muted);
+}
+body.dark-theme .breadcrumbs a:hover {
+    color: var(--primary);
+}
+body.dark-theme .breadcrumbs span {
+    color: var(--text);
+}

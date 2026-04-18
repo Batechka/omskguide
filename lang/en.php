@@ -31,5 +31,7 @@ return [
     'no_images' => 'No images',
     'confirm_delete' => 'Are you sure?',
     'login_error' => 'Invalid username or password',
-
+    'hero_title' => 'Omsk: City where history comes alive',
+    'hero_subtitle' => 'Discover the capital of Siberia — from ancient fortress to theater stages',
+    'hero_button' => 'Start exploring',
 ];

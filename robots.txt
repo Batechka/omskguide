@@ -1,0 +1,8 @@
+User-agent: *
+Disallow: /admin/
+Disallow: /includes/
+Disallow: /css/
+Disallow: /js/
+Allow: /uploads/
+Host: https://omskguide.ru
+Sitemap: https://omskguide.ru/sitemap.xml

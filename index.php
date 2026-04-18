@@ -18,7 +18,24 @@ $attractions = getFilteredAttractions($selected_category, $search_query);
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/hlebnikrosh.css">
     <?php include 'includes/metrica.php'; ?>
+
+    <!-- Основная версия страницы -->
+     <link rel="canonical" href="<?= BASE_URL ?>">
+    <!-- фавикон -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="16x16" href="image/favicon/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="image/favicon-32x32.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="image/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="image/favicon/android-chrome-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="image/favicon/android-chrome-512x512.png">
+    <meta name="theme-color" content="#ffffff">
+
+    <!-- Чтобы Яндекс и Google понимали, что русская и английская версии – это одна страница на разных языках. -->
+     <link rel="alternate" hreflang="ru" href="<?= BASE_URL ?>?lang=ru<?= isset($slug) ? '&slug='.urlencode($slug) : '' ?>">
+    <link rel="alternate" hreflang="en" href="<?= BASE_URL ?>?lang=en<?= isset($slug) ? '&slug='.urlencode($slug) : '' ?>">
+    <link rel="alternate" hreflang="x-default" href="<?= BASE_URL ?>">
 </head>
 <body>
     <header class="site-header">
@@ -28,6 +45,7 @@ $attractions = getFilteredAttractions($selected_category, $search_query);
             </a>
             <div class="nav-links">
                 <a href="<?= BASE_URL ?>" class="nav-link"><?= __('home') ?></a>
+                <a href="about.php" class="nav-link"><?= $lang == 'ru' ? 'О проекте' : 'About' ?></a>
                 <?php if (isset($_SESSION['admin_logged_in'])): ?>
                     <a href="admin/" class="nav-link">Админка</a>
                     <a href="admin/logout.php" class="nav-link">Выход</a>
@@ -54,9 +72,9 @@ $attractions = getFilteredAttractions($selected_category, $search_query);
             <div class="hero-overlay"></div>
         </div>
         <div class="hero-content container">
-            <h1 class="hero-title">Омск: город, где оживает история</h1>
-            <p class="hero-subtitle">Откройте для себя столицу Сибири — от древней крепости до театральных подмостков</p>
-            <a href="#explore" class="hero-btn">Начать прогулку</a>
+            <h1 class="hero-title"><?= __('hero_title') ?></h1>
+            <p class="hero-subtitle"><?= __('hero_subtitle') ?></p>
+            <a href="#explore" class="hero-btn"><?= __('hero_button') ?></a>
         </div>
     </section>
 

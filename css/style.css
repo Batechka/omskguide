@@ -173,7 +173,7 @@ h1 {
   font-family: "Playfair Display", serif;
   font-size: 3rem; /* 48px */
   font-weight: 700;
-  margin: 3rem 0 1.5rem; /* 48px 24px */
+
   letter-spacing: -0.02em;
   line-height: 1.2;
   background: linear-gradient(135deg, var(--text) 0%, var(--primary-dark) 100%);

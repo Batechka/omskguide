@@ -1,0 +1,16 @@
+<?php
+header("Content-Type: application/xml; charset=utf-8");
+echo '<?xml version="1.0" encoding="UTF-8"?>';
+?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url><loc>https://omskguide.ru/</loc><priority>1.0</priority></url>
+    <?php
+    require_once 'includes/config.php';
+    require_once 'includes/functions.php';
+    $attractions = getAttractions();
+    foreach ($attractions as $item) {
+        $loc = htmlspecialchars(BASE_URL . 'attraction.php?slug=' . urlencode($item['slug']));
+        echo "<url><loc>{$loc}</loc><priority>0.8</priority></url>\n";
+    }
+    ?>
+</urlset>

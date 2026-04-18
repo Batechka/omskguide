@@ -110,6 +110,7 @@ $relatedTitle = $lang == 'ru' ? 'Вам также может быть инте�
 
     <!-- Стили -->
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/hlebnikrosh.css">
 
     <!-- GLightbox CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css">
@@ -117,6 +118,14 @@ $relatedTitle = $lang == 'ru' ? 'Вам также может быть инте�
     <!-- Leaflet (карта) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Канонические ссылки (canonical) -->
+    <link rel="canonical" href="<?= $pageUrl ?>">
+
+    <!-- Чтобы Яндекс и Google понимали, что русская и английская версии – это одна страница на разных языках. -->
+     <link rel="alternate" hreflang="ru" href="<?= BASE_URL ?>?lang=ru<?= isset($slug) ? '&slug='.urlencode($slug) : '' ?>">
+    <link rel="alternate" hreflang="en" href="<?= BASE_URL ?>?lang=en<?= isset($slug) ? '&slug='.urlencode($slug) : '' ?>">
+    <link rel="alternate" hreflang="x-default" href="<?= BASE_URL ?>">
 </head>
 <body>
     <header class="site-header">
@@ -126,6 +135,7 @@ $relatedTitle = $lang == 'ru' ? 'Вам также может быть инте�
             </a>
             <div class="nav-links">
                 <a href="<?= BASE_URL ?>" class="nav-link"><?= __('home') ?></a>
+                <a href="about.php" class="nav-link"><?= $lang == 'ru' ? 'О проекте' : 'About' ?></a>
                 <?php if (isset($_SESSION['admin_logged_in'])): ?>
                     <a href="admin/" class="nav-link">Админка</a>
                     <a href="admin/logout.php" class="nav-link">Выход</a>
@@ -157,7 +167,15 @@ $relatedTitle = $lang == 'ru' ? 'Вам также может быть инте�
 
         <article class="attraction-detail">
             <h1><?= $title ?></h1>
-
+            <!-- ХЛЕБНЫЕ КРОШКИ ------------- -->
+            <div class="breadcrumbs">
+                <a href="<?= BASE_URL ?>"><?= __('home') ?></a> /
+                <?php if (!empty($attraction['category_name'])): ?>
+                    <a href="<?= BASE_URL ?>?category=<?= $attraction['category_id'] ?>"><?= htmlspecialchars($attraction['category_name']) ?></a> /
+                <?php endif; ?>
+                <span><?= htmlspecialchars($attraction['title']) ?></span>
+            </div>
+            <!-- ----------- -->
             <div class="attraction-meta">
                 <span>📍 Омск, Россия</span>
                 <?php if ($createdDate): ?>

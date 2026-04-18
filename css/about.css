@@ -1,0 +1,78 @@
+/* ===== СТРАНИЦА О ПРОЕКТЕ ===== */
+.about-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem 0 4rem;
+}
+
+.about-page h1 {
+  margin-bottom: 2.5rem;
+}
+
+.about-section {
+  margin-bottom: 3rem;
+}
+
+.about-section h2 {
+  font-family: "Playfair Display", serif;
+  font-size: 1.8rem;
+  margin-bottom: 1.5rem;
+  color: var(--primary-dark);
+}
+
+.about-section p {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  margin-bottom: 1rem;
+  color: var(--text);
+}
+
+.about-section ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.about-section li {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  margin-bottom: 0.75rem;
+  padding-left: 1.5rem;
+  position: relative;
+}
+
+.about-section li::before {
+  content: "•";
+  color: var(--primary);
+  font-weight: bold;
+  position: absolute;
+  left: 0;
+}
+
+.about-section a {
+  color: var(--primary);
+  text-decoration: none;
+  border-bottom: 1px solid var(--primary-soft);
+}
+
+.about-section a:hover {
+  border-bottom-color: var(--primary);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .about-page {
+    padding: 1rem 0 2rem;
+  }
+  .about-section h2 {
+    font-size: 1.5rem;
+  }
+  .about-section p,
+  .about-section li {
+    font-size: 1rem;
+  }
+}
+
+/* Тёмная тема */
+body.dark-theme .about-section h2 {
+  color: var(--primary);
+}
