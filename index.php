@@ -1,86 +1,48 @@
 <?php
 require_once 'includes/config.php';
 require_once 'includes/functions.php';
+$request = trim($_SERVER['REQUEST_URI'], '/');
+$request = strtok($request, '?');
+
+if ($request === '' || $request === 'index.php') {
+    echo "Главная страница (ЧПУ работает)";
+    exit;
+} else {
+    $attraction = getAttractionBySlug($request);
+    if ($attraction) {
+        $slug = $request;
+        require_once 'attraction.php';
+        exit;
+    } else {
+        http_response_code(404);
+        echo "Страница не найдена";
+        exit;
+    }
+}
+
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+// настройка header
+// Определяем переменные для header
+$pageTitle = __('site_title');
+$pageDescription = $lang == 'ru'
+    ? 'Достопримечательности Омска: исторические места, памятники, храмы и улицы. Путеводитель по Омску с фото и описаниями.'
+    : 'Omsk landmarks: historical places, monuments, churches and streets. Omsk travel guide with photos and descriptions.';
+$ogImage = BASE_URL . 'uploads/hero-bg.jpg';
+$canonicalUrl = BASE_URL;
+
+// -----------------------
 
 $categories = getCategories();
 $selected_category = isset($_GET['category']) ? $_GET['category'] : null;
 $search_query = isset($_GET['search']) ? trim($_GET['search']) : '';
 $attractions = getFilteredAttractions($selected_category, $search_query);
+
+
+require_once 'components/header.php';
 ?>
 
-<!DOCTYPE html>
-<html lang="<?= $lang ?>">
-<head>
-    <!-- Для index.php -->
-    <link rel="alternate" hreflang="ru" href="<?= BASE_URL ?>?lang=ru">
-    <link rel="alternate" hreflang="en" href="<?= BASE_URL ?>?lang=en">
-    <link rel="alternate" hreflang="x-default" href="<?= BASE_URL ?>">
 
-    <!-- решение дублируещегося контента -->
-    <link rel="canonical" href="<?= BASE_URL ?>">
-
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="keywords" content="достопримечательности Омска, Омская крепость, Успенский собор, Любинский проспект, памятник Степанычу, туризм в Омске, Omsk landmarks, Omsk fortress, Dormition Cathedral">
-    <meta name="description" content="<?= $lang == 'ru' ? 'Достопримечательности Омска: исторические места, памятники, храмы и улицы. Путеводитель по Омску с фото и описаниями. Музеи омска.' : 'Omsk landmarks: historical places, monuments, churches and streets. Omsk travel guide with photos and descriptions.' ?>">
-    <title><?= __('site_title') ?></title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/hlebnikrosh.css">
-    <?php include 'includes/metrica.php'; ?>
-
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="<?= __('site_title') ?>">
-    <meta property="og:description" content="<?= $lang == 'ru' ? 'Достопримечательности Омска: исторические места, памятники, храмы и улицы. Путеводитель по Омску с фото и описаниями.' : 'Omsk landmarks: historical places, monuments, churches and streets. Omsk travel guide with photos and descriptions.' ?>">
-    <meta property="og:image" content="<?= BASE_URL ?>uploads/821384a1844fb78111f00a3f3a290841.jpg">
-    <meta property="og:url" content="<?= BASE_URL ?>">
-    <meta property="og:site_name" content="<?= __('site_title') ?>">
-
-    <!-- Основная версия страницы -->
-     <link rel="canonical" href="<?= BASE_URL ?>">
-    <!-- фавикон -->
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <link rel="icon" type="image/png" sizes="16x16" href="image/favicon/favicon-16x16.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="image/favicon-32x32.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="image/favicon/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="image/favicon/android-chrome-192x192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="image/favicon/android-chrome-512x512.png">
-    <meta name="theme-color" content="#ffffff">
-
-    <!-- Чтобы Яндекс и Google понимали, что русская и английская версии – это одна страница на разных языках. -->
-     <link rel="alternate" hreflang="ru" href="<?= BASE_URL ?>?lang=ru<?= isset($slug) ? '&slug='.urlencode($slug) : '' ?>">
-    <link rel="alternate" hreflang="en" href="<?= BASE_URL ?>?lang=en<?= isset($slug) ? '&slug='.urlencode($slug) : '' ?>">
-    <link rel="alternate" hreflang="x-default" href="<?= BASE_URL ?>">
-</head>
-<body>
-    <header class="site-header">
-        <div class="container header-inner">
-            <a href="<?= BASE_URL ?>" class="site-title">
-                <span>Омскъ</span> Исторический
-            </a>
-            <div class="nav-links">
-                <a href="<?= BASE_URL ?>" class="nav-link"><?= __('home') ?></a>
-                <a href="about.php" class="nav-link"><?= $lang == 'ru' ? 'О проекте' : 'About' ?></a>
-                <?php if (isset($_SESSION['admin_logged_in'])): ?>
-                    <a href="admin/" class="nav-link">Админка</a>
-                    <a href="admin/logout.php" class="nav-link">Выход</a>
-                <?php endif; ?>
-                <div class="lang-switch">
-                    <a href="?lang=ru" class="lang-btn <?= $lang=='ru'?'active':'' ?>">RU</a>
-                    <a href="?lang=en" class="lang-btn <?= $lang=='en'?'active':'' ?>">EN</a>
-                </div>
-                <div class="accessibility-controls">
-                    <button class="theme-toggle" data-theme="light" title="Светлая тема">☀️</button>
-                    <button class="theme-toggle" data-theme="dark" title="Тёмная тема">🌙</button>
-                    <button class="font-size-btn" data-size="increase" title="Увеличить шрифт">A+</button>
-                    <button class="font-size-btn" data-size="reset" title="Сбросить">A</button>
-                </div>
-            </div>
-        </div>
-    </header>
 
     <!-- HERO БАННЕР (знакомство с сайтом) -->
     <section class="hero">
@@ -131,16 +93,8 @@ $attractions = getFilteredAttractions($selected_category, $search_query);
         </div>
     </main>
 
-    <footer class="site-footer">
-        <div class="container">
-            <p>© <?= date('Y') ?> Омск. Историческое наследие.</p>
-            <!-- Добавьте ссылки на новые документы -->
-            <p>
-                <a href="userprava/privacy.php">Политика конфиденциальности</a> |
-                <a href="userprava/terms.php">Пользовательское соглашение</a>
-            </p>
-        </div>
-    </footer>
+    <?php $extraScripts = '<script src="' . BASE_URL . 'js/search.js"></script>'; ?>
+    <?php require_once 'components/footer.php'; ?>
 
     <script>
         const searchInput = document.getElementById('searchInput');
