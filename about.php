@@ -120,8 +120,10 @@ $siteName = __('site_title');
                     <section class="about-section">
                         <h2>Contacts</h2>
                         <p>Email: <a href="mailto:info@omskguide.ru">info@omskguide.ru</a><br>
-                        VKontakte: <a href="https://vk.com/omskguide" target="_blank" rel="noopener">@omskguide</a></p>
+                        VKontakte: <a href="" target="_blank" rel="noopener">@omskguide</a></p>
                         <p>We always welcome feedback!</p>
+                        <!-- Мой телефон -->
+                        <p>Мой телефон: <a href="tel:+79131234567">+7 (995) 848-56-45</a></p>
                     </section>
                 <?php endif; ?>
             </div>
@@ -131,6 +133,11 @@ $siteName = __('site_title');
     <footer class="site-footer">
         <div class="container">
             <p>© <?= date('Y') ?> Омск. Историческое наследие.</p>
+            <!-- Добавьте ссылки на новые документы -->
+            <p>
+                <a href="/userprava/privacy.php">Политика конфиденциальности</a> |
+                <a href="/userprava/terms.php">Пользовательское соглашение</a>
+            </p>
         </div>
     </footer>
 

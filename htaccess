@@ -1,2 +1,6 @@
 RewriteEngine On
-RewriteRule ^sitemap\.xml$ sitemap.php [L]
+RewriteBase /omsk/
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [QSA,L]

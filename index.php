@@ -7,12 +7,22 @@ $selected_category = isset($_GET['category']) ? $_GET['category'] : null;
 $search_query = isset($_GET['search']) ? trim($_GET['search']) : '';
 $attractions = getFilteredAttractions($selected_category, $search_query);
 ?>
+
 <!DOCTYPE html>
 <html lang="<?= $lang ?>">
 <head>
+    <!-- Для index.php -->
+    <link rel="alternate" hreflang="ru" href="<?= BASE_URL ?>?lang=ru">
+    <link rel="alternate" hreflang="en" href="<?= BASE_URL ?>?lang=en">
+    <link rel="alternate" hreflang="x-default" href="<?= BASE_URL ?>">
+
+    <!-- решение дублируещегося контента -->
+    <link rel="canonical" href="<?= BASE_URL ?>">
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="keywords" content="достопримечательности Омска, Омская крепость, Успенский собор, Любинский проспект, памятник Степанычу, туризм в Омске, Omsk landmarks, Omsk fortress, Dormition Cathedral">
+    <meta name="description" content="<?= $lang == 'ru' ? 'Достопримечательности Омска: исторические места, памятники, храмы и улицы. Путеводитель по Омску с фото и описаниями. Музеи омска.' : 'Omsk landmarks: historical places, monuments, churches and streets. Omsk travel guide with photos and descriptions.' ?>">
     <title><?= __('site_title') ?></title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,6 +30,14 @@ $attractions = getFilteredAttractions($selected_category, $search_query);
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/hlebnikrosh.css">
     <?php include 'includes/metrica.php'; ?>
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="<?= __('site_title') ?>">
+    <meta property="og:description" content="<?= $lang == 'ru' ? 'Достопримечательности Омска: исторические места, памятники, храмы и улицы. Путеводитель по Омску с фото и описаниями.' : 'Omsk landmarks: historical places, monuments, churches and streets. Omsk travel guide with photos and descriptions.' ?>">
+    <meta property="og:image" content="<?= BASE_URL ?>uploads/821384a1844fb78111f00a3f3a290841.jpg">
+    <meta property="og:url" content="<?= BASE_URL ?>">
+    <meta property="og:site_name" content="<?= __('site_title') ?>">
 
     <!-- Основная версия страницы -->
      <link rel="canonical" href="<?= BASE_URL ?>">
@@ -116,6 +134,11 @@ $attractions = getFilteredAttractions($selected_category, $search_query);
     <footer class="site-footer">
         <div class="container">
             <p>© <?= date('Y') ?> Омск. Историческое наследие.</p>
+            <!-- Добавьте ссылки на новые документы -->
+            <p>
+                <a href="userprava/privacy.php">Политика конфиденциальности</a> |
+                <a href="userprava/terms.php">Пользовательское соглашение</a>
+            </p>
         </div>
     </footer>
 
