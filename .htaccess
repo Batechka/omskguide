@@ -1,10 +1,9 @@
-RewriteRule ^sitemap\.xml$ sitemap.php [L]
 RewriteEngine On
-RewriteBase /
+RewriteBase /omsk/
 
-# Не трогаем существующие файлы и папки
+# Не трогаем реальные файлы и папки
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 
-# Перенаправляем всё на index.php
+# Все остальные запросы направляем на index.php
 RewriteRule ^(.*)$ index.php [QSA,L]
