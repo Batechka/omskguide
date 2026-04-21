@@ -1,34 +1,24 @@
 <?php
+
+session_start();
+
 require_once 'includes/config.php';
 require_once 'includes/functions.php';
 
-// --- Определяем текущий запрос ---
-$request = trim($_SERVER['REQUEST_URI'], '/');
-$request = strtok($request, '?');
+/*
+|--------------------------------------------------------------------------
+| Язык сайта
+|--------------------------------------------------------------------------
+*/
 
-// Если сайт в подпапке (например, /omsk/), убираем её из запроса
-$basePath = trim(parse_url(BASE_URL, PHP_URL_PATH), '/');
-if ($basePath && strpos($request, $basePath) === 0) {
-    $request = substr($request, strlen($basePath));
-    $request = trim($request, '/');
-}
+if (isset($_GET['lang']) && in_array($_GET['lang'], ['ru','en'])) {
 
-
-
-
-if (isset($_GET['lang']) && in_array($_GET['lang'], ['ru', 'en'])) {
-
-    // сохраняем язык
     $_SESSION['lang'] = $_GET['lang'];
 
-    // берем текущие GET параметры
     $params = $_GET;
-
-    // удаляем lang из URL
     unset($params['lang']);
 
-    // собираем чистый URL
-    $redirectUrl = $_SERVER['PHP_SELF'];
+    $redirectUrl = strtok($_SERVER["REQUEST_URI"], '?');
 
     if (!empty($params)) {
         $redirectUrl .= '?' . http_build_query($params);
@@ -38,57 +28,82 @@ if (isset($_GET['lang']) && in_array($_GET['lang'], ['ru', 'en'])) {
     exit;
 }
 
-// --- Маршрутизация ---
+$lang = $_SESSION['lang'] ?? 'ru';
 
-// 1. Главная страница
-if (empty($request) || $request === 'index.php') {
+
+/*
+|--------------------------------------------------------------------------
+| Определяем текущий запрос
+|--------------------------------------------------------------------------
+*/
+
+$request = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
+
+$basePath = trim(parse_url(BASE_URL, PHP_URL_PATH), '/');
+
+if ($basePath && str_starts_with($request, $basePath)) {
+    $request = substr($request, strlen($basePath));
+    $request = trim($request, '/');
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Главная страница
+|--------------------------------------------------------------------------
+*/
+
+if ($request === '' || $request === 'index.php') {
+
     $categories = getCategories();
+
     $selected_category = $_GET['category'] ?? null;
     $search_query = trim($_GET['search'] ?? '');
+
     $attractions = getFilteredAttractions($selected_category, $search_query);
 
     $pageTitle = __('site_title');
-    $pageDescription = $lang == 'ru'
+
+    $pageDescription = $lang === 'ru'
         ? 'Достопримечательности Омска: исторические места, памятники, храмы и улицы.'
         : 'Omsk landmarks: historical places, monuments, churches and streets.';
+
     $ogImage = BASE_URL . 'uploads/hero-bg.jpg';
-    $canonicalUrl = BASE_URL;
-    ?>
-    <!DOCTYPE html>
-    <html lang="<?= $lang ?>">
+
+    $canonicalUrl = strtok(BASE_URL . $_SERVER['REQUEST_URI'], '?');
+
+?>
+<!DOCTYPE html>
+<html lang="<?= htmlspecialchars($lang) ?>">
     <head>
+
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title><?= htmlspecialchars($pageTitle) ?></title>
-        <meta name="description" content="<?= htmlspecialchars($pageDescription) ?>">
-        <meta name="keywords" content="достопримечательности Омска, Омская крепость, Успенский собор, Любинский проспект, памятник Степанычу, туризм в Омске, Omsk landmarks">
 
-        <!-- Open Graph -->
+        <title><?= htmlspecialchars($pageTitle) ?></title>
+
+        <meta name="description" content="<?= htmlspecialchars($pageDescription) ?>">
+
         <meta property="og:type" content="website">
         <meta property="og:title" content="<?= htmlspecialchars($pageTitle) ?>">
         <meta property="og:description" content="<?= htmlspecialchars($pageDescription) ?>">
         <meta property="og:image" content="<?= $ogImage ?>">
         <meta property="og:url" content="<?= $canonicalUrl ?>">
-        <meta property="og:site_name" content="<?= __('site_title') ?>">
 
-        <!-- Canonical -->
         <link rel="canonical" href="<?= $canonicalUrl ?>">
 
-        <!-- hreflang -->
         <link rel="alternate" hreflang="ru" href="<?= BASE_URL ?>?lang=ru">
         <link rel="alternate" hreflang="en" href="<?= BASE_URL ?>?lang=en">
         <link rel="alternate" hreflang="x-default" href="<?= BASE_URL ?>">
 
-        <!-- Шрифты -->
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-
-        <!-- Стили -->
         <link rel="stylesheet" href="<?= BASE_URL ?>css/style.css">
-        <link rel="stylesheet" href="css/faq.css">
+        <link rel="stylesheet" href="<?= BASE_URL ?>css/faq.css">
+
         <?php include 'includes/metrica.php'; ?>
+
     </head>
+
+
     <body>
         <header class="site-header">
             <div class="container header-inner">
@@ -228,7 +243,7 @@ if (empty($request) || $request === 'index.php') {
 
             searchInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
-                    window.location.href = `index.php?search=${encodeURIComponent(searchInput.value)}`;
+                    window.location.href = `<?= BASE_URL ?>?search=${encodeURIComponent(searchInput.value)}`;
                 }
             });
 
@@ -274,38 +289,58 @@ if (empty($request) || $request === 'index.php') {
         </script>
     </body>
     </html>
-    <?php
-    exit;
+<?php
+exit;
 }
 
-// 2. Страница достопримечательности
+/*
+|--------------------------------------------------------------------------
+| Страница достопримечательности
+|--------------------------------------------------------------------------
+*/
+
 $attraction = getAttractionBySlug($request);
+
 if ($attraction) {
     $slug = $request;
-    require_once 'attraction.php';
+    require 'attraction.php';
     exit;
 }
 
-// 3. Статические страницы (about, privacy, terms)
-if (in_array($request, ['about', 'privacy', 'terms'])) {
-    require_once $request . '.php';
+
+/*
+|--------------------------------------------------------------------------
+| Статические страницы
+|--------------------------------------------------------------------------
+*/
+
+if (in_array($request, ['about','privacy','terms'])) {
+    require $request . '.php';
     exit;
 }
 
-// 4. 404
+
+/*
+|--------------------------------------------------------------------------
+| 404
+|--------------------------------------------------------------------------
+*/
+
 http_response_code(404);
 ?>
 <!DOCTYPE html>
-<html lang="<?= $lang ?>">
+<html lang="<?= htmlspecialchars($lang) ?>">
 <head>
-    <meta charset="UTF-8">
-    <title>404 — Страница не найдена</title>
-    <link rel="stylesheet" href="<?= BASE_URL ?>css/style.css">
+<meta charset="UTF-8">
+<title>404 — Страница не найдена</title>
+<link rel="stylesheet" href="<?= BASE_URL ?>css/style.css">
 </head>
 <body>
-    <div class="container" style="padding:4rem 0; text-align:center;">
-        <h1>Страница не найдена</h1>
-        <a href="<?= BASE_URL ?>" class="btn">На главную</a>
-    </div>
+
+<div class="container" style="padding:4rem 0;text-align:center;">
+<h1>Страница не найдена</h1>
+<a href="<?= BASE_URL ?>" class="btn">На главную</a>
+</div>
+
 </body>
 </html>

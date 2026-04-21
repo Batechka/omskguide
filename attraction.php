@@ -2,19 +2,18 @@
 require_once 'includes/config.php';
 require_once 'includes/functions.php';
 
-if (!isset($slug)) {
+// Гарантируем запуск сессии
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Переменная $attraction должна быть передана из index.php
+if (!isset($attraction) || !is_array($attraction)) {
     header('Location: ' . BASE_URL);
     exit;
 }
 
-$attraction = getAttractionBySlug($slug);
-if (!$attraction) {
-    http_response_code(404);
-    echo '<!DOCTYPE html><html><head><title>Не найдено</title><link rel="stylesheet" href="'.BASE_URL.'css/style.css"></head><body><div class="container" style="padding:4rem 0; text-align:center;"><h1>Достопримечательность не найдена</h1><a href="'.BASE_URL.'" class="btn">На главную</a></div></body></html>';
-    exit;
-}
-
-// Счётчик просмотров (один раз за сессию)
+// Счётчик просмотров (один раз за сессию) – на SEO не влияет, оставлен для интерфейса
 if (!isset($_SESSION['viewed_' . $attraction['id']])) {
     $pdo->prepare("UPDATE attractions SET views_count = views_count + 1 WHERE id = ?")
         ->execute([$attraction['id']]);
@@ -23,26 +22,57 @@ if (!isset($_SESSION['viewed_' . $attraction['id']])) {
 }
 
 $images = getImages($attraction['id']);
-$primaryImage = !empty($images) ? UPLOAD_URL . $images[0]['filename'] : BASE_URL . 'img/default-og.jpg';
-$description = $attraction['short_description'] ?? '';
-$title = htmlspecialchars($attraction['title']);
-$pageUrl = BASE_URL . urlencode($slug); // ЧПУ-ссылка
+$primaryImage = !empty($images)
+    ? UPLOAD_URL . $images[0]['filename']
+    : BASE_URL . 'img/default-og.jpg';
 
-// Похожие достопримечательности (3 случайных, исключая текущую)
+// Улучшенное мета-описание
+$description = $attraction['short_description'] ?? '';
+if (empty($description) && !empty($attraction['full_description'])) {
+    $plainText = strip_tags($attraction['full_description']);
+    $description = mb_substr($plainText, 0, 157); // берём чуть меньше 160 для запаса
+    if (mb_strlen($plainText) > 157) {
+        $lastSpace = mb_strrpos($description, ' ');
+        if ($lastSpace !== false) {
+            $description = mb_substr($description, 0, $lastSpace);
+        }
+        $description .= '…';
+    }
+    $description = $description ?: 'Достопримечательность Омска: фото, описание, карта и маршрут.';
+}
+
+$title = htmlspecialchars($attraction['title'], ENT_QUOTES, 'UTF-8');
+// Улучшенный Title с ключевыми словами
+$baseTitle = $title . ' — достопримечательность Омска';
+if (mb_strlen($baseTitle) > 60) {
+    $fullTitle = $title . ' — Омск'; // краткий вариант для очень длинных названий
+} else {
+    $fullTitle = $baseTitle . ' | ' . __('site_title');
+}
+
+// Канонический URL – чистый ЧПУ без параметров
+$canonicalSlug = rawurlencode($slug);
+$pageUrl = rtrim(BASE_URL, '/') . '/' . rawurlencode($slug);
+
+// Похожие достопримечательности
 $relatedAttractions = getRelatedAttractions($attraction['id'], 3);
 
-// Время чтения
+// Время чтения (корректный подсчёт слов для кириллицы, защита от пустоты)
 $fullText = strip_tags($attraction['full_description'] ?? $attraction['short_description']);
-$wordCount = str_word_count($fullText);
-$readingTime = ceil($wordCount / 200);
+if (!empty($fullText)) {
+    $wordCount = preg_match_all('/\p{L}+/u', $fullText ?? '', $m);
+    $readingTime = ceil($wordCount / 200);
+} else {
+    $readingTime = 1;
+}
 $readingTimeText = $lang == 'ru'
     ? "Время чтения: ~{$readingTime} мин"
     : "Reading time: ~{$readingTime} min";
 
-// Оглавление (теперь включает все заголовки h1-h6)
+// Оглавление (все заголовки h1-h6)
 $toc = generateTOC($attraction['full_description'] ?? '');
 
-// Дата
+// Дата с учётом языка
 $createdDate = !empty($attraction['created_at'])
     ? formatDate($attraction['created_at'], $lang)
     : '';
@@ -51,61 +81,134 @@ $createdDate = !empty($attraction['created_at'])
 $shareText = $lang == 'ru' ? 'Поделиться' : 'Share';
 $editText = $lang == 'ru' ? 'Редактировать' : 'Edit';
 $relatedTitle = $lang == 'ru' ? 'Вам также может быть интересно' : 'You might also like';
+
+// Подготовка данных для Schema.org (надёжный массив → json_encode)
+$schemaImages = array_map(function($img) {
+    return UPLOAD_URL . $img['filename'];
+}, $images);
+if (empty($schemaImages)) {
+    $schemaImages = [BASE_URL . 'img/default-og.jpg'];
+}
+
+$schema = [
+    '@context' => 'https://schema.org',
+    '@type' => 'TouristAttraction',
+    'name' => $attraction['title'],
+    'description' => $description,
+    'mainEntityOfPage' => [
+        '@type' => 'WebPage',
+        '@id' => $pageUrl
+    ],
+    'publisher' => [
+        '@type' => 'Organization',
+        'name' => __('site_title'),
+        // Добавляем логотип только если файл существует (проверяем на сервере)
+        'logo' => file_exists($_SERVER['DOCUMENT_ROOT'] . '/img/logo.png') ? [
+            '@type' => 'ImageObject',
+            'url' => BASE_URL . 'img/logo.png'
+        ] : null
+    ],
+    'image' => $schemaImages,
+    'url' => $pageUrl,
+    'address' => [
+        '@type' => 'PostalAddress',
+        'addressLocality' => 'Омск',
+        'addressCountry' => 'RU'
+    ],
+    'datePublished' => date('c', strtotime($attraction['created_at'] ?? 'now'))
+];
+
+if (!empty($attraction['latitude']) && !empty($attraction['longitude'])) {
+    $schema['geo'] = [
+        '@type' => 'GeoCoordinates',
+        'latitude' => $attraction['latitude'],
+        'longitude' => $attraction['longitude']
+    ];
+}
+if (empty($schema['publisher']['logo'])) {
+    unset($schema['publisher']['logo']);
+}
+if (!empty($attraction['category_name']) && !empty($attraction['category_id'])) {
+    $breadcrumbItems[] = [
+        '@type' => 'ListItem',
+        'position' => $position++,
+        'name' => $attraction['category_name'],
+        'item' => BASE_URL . '?category=' . $attraction['category_id']
+    ];
+}
+// BreadcrumbList Schema.org (совпадает с визуальными крошками)
+
+
+$breadcrumbItems = [
+    [
+        '@type' => 'ListItem',
+        'position' => 1,
+        'name' => __('home'),
+        'item' => BASE_URL
+    ]
+];
+$position = 2;
+if (!empty($attraction['category_name']) && !empty($attraction['category_id'])) {
+    $breadcrumbItems[] = [
+        '@type' => 'ListItem',
+        'position' => $position++,
+        'name' => $attraction['category_name'],
+        'item' => BASE_URL . '?category=' . $attraction['category_id']
+    ];
+}
+$breadcrumbItems[] = [
+    '@type' => 'ListItem',
+    'position' => $position,
+    'name' => $attraction['title'],
+    'item' => $pageUrl
+];
+$breadcrumbSchema = [
+    '@context' => 'https://schema.org',
+    '@type' => 'BreadcrumbList',
+    'itemListElement' => $breadcrumbItems
+];
 ?>
 <!DOCTYPE html>
-<html lang="<?= $lang ?>">
+<html lang="<?= htmlspecialchars($lang ?? 'ru', ENT_QUOTES, 'UTF-8') ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $title ?> – <?= __('site_title') ?></title>
+    <title><?= htmlspecialchars($fullTitle) ?></title>
     <meta name="description" content="<?= htmlspecialchars($description) ?>">
-    <meta name="keywords" content="<?= htmlspecialchars($attraction['title']) ?>, достопримечательности Омска, Omsk landmarks">
-
-    <!-- Open Graph -->
-    <meta property="og:type" content="place">
-    <meta property="og:title" content="<?= $title ?>">
+    <!-- Open Graph (тип website для карточки места) -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="<?= htmlspecialchars($fullTitle) ?>">
     <meta property="og:description" content="<?= htmlspecialchars($description) ?>">
     <meta property="og:image" content="<?= $primaryImage ?>">
     <meta property="og:url" content="<?= $pageUrl ?>">
     <meta property="og:site_name" content="<?= __('site_title') ?>">
-    <meta property="place:location:latitude" content="<?= $attraction['latitude'] ?? '54.9833' ?>">
-    <meta property="place:location:longitude" content="<?= $attraction['longitude'] ?? '73.3667' ?>">
+    <?php if (!empty($attraction['latitude']) && !empty($attraction['longitude'])): ?>
+    <meta property="place:location:latitude" content="<?= $attraction['latitude'] ?>">
+    <meta property="place:location:longitude" content="<?= $attraction['longitude'] ?>">
+    <?php endif; ?>
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="<?= $title ?>">
+    <meta name="twitter:title" content="<?= htmlspecialchars($fullTitle) ?>">
     <meta name="twitter:description" content="<?= htmlspecialchars($description) ?>">
     <meta name="twitter:image" content="<?= $primaryImage ?>">
+    <meta name="robots" content="index,follow">
 
-    <!-- Schema.org -->
+    <!-- Schema.org JSON-LD (валидный) -->
     <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "TouristAttraction",
-      "name": "<?= $title ?>",
-      "description": "<?= htmlspecialchars($description) ?>",
-      "image": "<?= $primaryImage ?>",
-      "url": "<?= $pageUrl ?>",
-      "address": {
-        "@type": "PostalAddress",
-        "addressLocality": "Омск",
-        "addressCountry": "RU"
-      },
-      "geo": {
-        "@type": "GeoCoordinates",
-        "latitude": "<?= $attraction['latitude'] ?? '54.9833' ?>",
-        "longitude": "<?= $attraction['longitude'] ?? '73.3667' ?>"
-      }
-    }
+    <?= json_encode($schema, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) ?>
+    </script>
+    <script type="application/ld+json">
+    <?= json_encode($breadcrumbSchema, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) ?>
     </script>
 
     <!-- Каноническая ссылка -->
     <link rel="canonical" href="<?= $pageUrl ?>">
 
-    <!-- hreflang для языковых версий -->
-    <link rel="alternate" hreflang="ru" href="<?= BASE_URL . urlencode($slug) ?>?lang=ru">
-    <link rel="alternate" hreflang="en" href="<?= BASE_URL . urlencode($slug) ?>?lang=en">
-    <link rel="alternate" hreflang="x-default" href="<?= BASE_URL . urlencode($slug) ?>">
+    <!-- hreflang для языковых версий (полные URL, параметр ?lang=) -->
+    <link rel="alternate" hreflang="ru" href="<?= $pageUrl ?>?lang=ru">
+    <link rel="alternate" hreflang="en" href="<?= $pageUrl ?>?lang=en">
+    <link rel="alternate" hreflang="x-default" href="<?= $pageUrl ?>">
 
     <!-- Шрифты -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -164,7 +267,7 @@ $relatedTitle = $lang == 'ru' ? 'Вам также может быть инте�
         <article class="attraction-detail">
             <h1><?= $title ?></h1>
 
-            <!-- Хлебные крошки -->
+            <!-- Хлебные крошки (визуальные) -->
             <div class="breadcrumbs">
                 <a href="<?= BASE_URL ?>"><?= __('home') ?></a> /
                 <?php if (!empty($attraction['category_name'])): ?>
@@ -185,9 +288,9 @@ $relatedTitle = $lang == 'ru' ? 'Вам также может быть инте�
             <!-- Кнопки "Поделиться" -->
             <div class="share-buttons">
                 <span><?= $shareText ?>:</span>
-                <a href="https://vk.com/share.php?url=<?= urlencode($pageUrl) ?>&title=<?= urlencode($title) ?>" target="_blank" class="share-btn vk" rel="noopener">VK</a>
-                <a href="https://t.me/share/url?url=<?= urlencode($pageUrl) ?>&text=<?= urlencode($title) ?>" target="_blank" class="share-btn telegram" rel="noopener">Telegram</a>
-                <a href="https://api.whatsapp.com/send?text=<?= urlencode($title . ' ' . $pageUrl) ?>" target="_blank" class="share-btn whatsapp" rel="noopener">WhatsApp</a>
+                <a href="https://vk.com/share.php?url=<?= urlencode($pageUrl) ?>&title=<?= urlencode($fullTitle) ?>" target="_blank" class="share-btn vk" rel="noopener">VK</a>
+                <a href="https://t.me/share/url?url=<?= urlencode($pageUrl) ?>&text=<?= urlencode($fullTitle) ?>" target="_blank" class="share-btn telegram" rel="noopener">Telegram</a>
+                <a href="https://api.whatsapp.com/send?text=<?= urlencode($fullTitle . ' ' . $pageUrl) ?>" target="_blank" class="share-btn whatsapp" rel="noopener">WhatsApp</a>
             </div>
 
             <!-- Оглавление -->
@@ -204,7 +307,6 @@ $relatedTitle = $lang == 'ru' ? 'Вам также может быть инте�
 
             <div class="description">
                 <?php
-                // Расширенный список разрешённых тегов (совпадает с админкой)
                 $allowed_tags = '<h1><h2><h3><h4><h5><h6><p><br><strong><b><em><i><u><ul><ol><li><blockquote>';
                 $desc = $attraction['full_description'] ?? $attraction['short_description'];
                 if (strip_tags($desc) === $desc) {
@@ -222,16 +324,17 @@ $relatedTitle = $lang == 'ru' ? 'Вам также может быть инте�
                     <?= __('gallery') ?>
                 </h3>
                 <div class="gallery-grid" id="gallery">
-                    <?php foreach ($images as $img): ?>
+                    <?php $isFirst = true; foreach ($images as $img): ?>
                         <a href="<?= UPLOAD_URL . htmlspecialchars($img['filename']) ?>"
                             class="gallery-item glightbox"
                             data-gallery="gallery"
                             data-title="<?= htmlspecialchars($img['alt_text'] ?? $attraction['title']) ?>">
                             <img src="<?= UPLOAD_URL . htmlspecialchars($img['filename']) ?>"
                                 alt="<?= htmlspecialchars($img['alt_text'] ?? $attraction['title']) ?>"
-                                loading="lazy">
+                                loading="<?= $isFirst ? 'eager' : 'lazy' ?>"
+                                <?= $isFirst ? 'fetchpriority="high"' : '' ?>>
                         </a>
-                    <?php endforeach; ?>
+                    <?php $isFirst = false; endforeach; ?>
                 </div>
             <?php elseif (isset($_SESSION['admin_logged_in'])): ?>
                 <div class="no-images-message">
@@ -284,7 +387,7 @@ $relatedTitle = $lang == 'ru' ? 'Вам также может быть инте�
                             <div class="card-content">
                                 <h3 class="card-title"><?= htmlspecialchars($related['title']) ?></h3>
                                 <p class="card-description"><?= htmlspecialchars($related['short_description']) ?></p>
-                                <a href="<?= BASE_URL . urlencode($related['slug']) ?>" class="btn">
+                                <a href="<?= BASE_URL . rawurlencode($related['slug']) ?>" class="btn">
                                     <?= __('read_more') ?>
                                 </a>
                             </div>
@@ -385,6 +488,10 @@ $relatedTitle = $lang == 'ru' ? 'Вам также может быть инте�
         const mapContainer = document.getElementById('attractionMap');
         if (!mapContainer) return;
 
+        const lat = <?= $lat ?? 54.9833 ?>;
+        const lng = <?= $lng ?? 73.3667 ?>;
+        const title = <?= json_encode($attraction['title'], JSON_UNESCAPED_UNICODE) ?>;
+
         if (mapContainer._leaflet_id) {
             const parent = mapContainer.parentNode;
             const newContainer = document.createElement('div');
@@ -393,26 +500,14 @@ $relatedTitle = $lang == 'ru' ? 'Вам также может быть инте�
             newContainer.style.borderRadius = '20px';
             newContainer.style.boxShadow = 'var(--shadow)';
             parent.replaceChild(newContainer, mapContainer);
-
-            const map = L.map(newContainer).setView([<?= $lat ?? 54.9833 ?>, <?= $lng ?? 73.3667 ?>], 15);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(map);
-            L.marker([<?= $lat ?? 54.9833 ?>, <?= $lng ?? 73.3667 ?>])
-                .addTo(map)
-                .bindPopup('<?= htmlspecialchars($attraction['title'], ENT_QUOTES) ?>')
-                .openPopup();
-            return;
+            mapContainer = newContainer;
         }
 
-        const map = L.map(mapContainer).setView([<?= $lat ?? 54.9833 ?>, <?= $lng ?? 73.3667 ?>], 15);
+        const map = L.map(mapContainer).setView([lat, lng], 15);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
-        L.marker([<?= $lat ?? 54.9833 ?>, <?= $lng ?? 73.3667 ?>])
-            .addTo(map)
-            .bindPopup('<?= htmlspecialchars($attraction['title'], ENT_QUOTES) ?>')
-            .openPopup();
+        L.marker([lat, lng]).addTo(map).bindPopup(title).openPopup();
     })();
     </script>
     <?php endif; ?>

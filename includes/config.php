@@ -1,5 +1,7 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 define('BASE_URL', 'http://localhost/omsk/'); // измените на свой домен
 define('UPLOAD_DIR', __DIR__ . '/../uploads/attractions/');
