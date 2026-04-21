@@ -14,8 +14,7 @@ if ($basePath && strpos($request, $basePath) === 0) {
 }
 
 
-// Проверяем, есть ли параметр lang в URL и сохраняем его в сессию
-session_start();
+
 
 if (isset($_GET['lang']) && in_array($_GET['lang'], ['ru', 'en'])) {
 
@@ -87,6 +86,7 @@ if (empty($request) || $request === 'index.php') {
 
         <!-- Стили -->
         <link rel="stylesheet" href="<?= BASE_URL ?>css/style.css">
+        <link rel="stylesheet" href="css/faq.css">
         <?php include 'includes/metrica.php'; ?>
     </head>
     <body>
@@ -173,6 +173,9 @@ if (empty($request) || $request === 'index.php') {
                 <?php endforeach; ?>
             </div>
         </main>
+
+        <!-- faq -->
+        <?php include 'components/faq.php'; ?>
 
         <footer class="site-footer">
             <div class="container">

@@ -1,15 +1,15 @@
 DirectoryIndex index.php
 
 RewriteEngine On
-RewriteBase /
+RewriteBase /omsk
 
-# Не трогаем реальные файлы и папки
+# Не переписывать реальные файлы
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 
-# Все остальные запросы направляем на index.php
-RewriteRule ^(.*)$ index.php [QSA,L]
+# Все запросы → index.php
+RewriteRule ^(.*)$ index.php?url=$1 [QSA,L]
 
-# Редирект со старых URL (если остались)
+# Старые ссылки attraction.php?slug=
 RewriteCond %{QUERY_STRING} ^slug=([^&]+)$
 RewriteRule ^attraction\.php$ /%1? [R=301,L]
