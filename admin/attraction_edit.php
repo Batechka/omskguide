@@ -42,8 +42,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $id = $pdo->lastInsertId();
             }
 
-            // Разрешённые HTML-теги
-            $allowed_tags = '<strong><b><em><i><u><h3><h4><p><br><ul><ol><li><blockquote>';
+            // Разрешённые HTML-теги (добавлены H1, H2, H5, H6)
+            $allowed_tags = '<h1><h2><h3><h4><h5><h6><p><br><strong><b><em><i><u><ul><ol><li><blockquote>';
 
             foreach (['ru', 'en'] as $lang_code) {
                 $title = strip_tags($_POST["title_$lang_code"] ?? '');
@@ -59,7 +59,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     full_description = VALUES(full_description)");
                 $stmt->execute([$id, $lang_code, $title, $short, $full]);
             }
-
+            require_once '../includes/indexnow.php';
+            $pageUrl = BASE_URL . urlencode($slug);
+            indexnow_send($pageUrl);
             header('Location: index.php?msg=Сохранено');
             exit;
         } catch (PDOException $e) {
@@ -89,7 +91,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             padding: 1rem;
             background: #fff;
         }
-        .preview-box h3 { margin-top: 1.5rem; }
+        .preview-box h1, .preview-box h2, .preview-box h3,
+        .preview-box h4, .preview-box h5, .preview-box h6 { margin-top: 1.5rem; }
         .preview-box p { margin-bottom: 1rem; }
         .preview-box ul { padding-left: 2rem; margin-bottom: 1rem; }
         .preview-box blockquote {
@@ -98,7 +101,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             margin: 1rem 0;
             color: #666;
         }
-        /* Визуальный редактор */
         .visual-editor {
             min-height: 250px;
             border: 1px solid #ced4da;
@@ -107,10 +109,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             background: #fff;
             overflow-y: auto;
         }
-        .visual-editor:focus {
-            outline: 2px solid #86b7fe;
-        }
-        .visual-editor h3 { margin-top: 1rem; }
+        .visual-editor:focus { outline: 2px solid #86b7fe; }
+        .visual-editor h1, .visual-editor h2, .visual-editor h3,
+        .visual-editor h4, .visual-editor h5, .visual-editor h6 { margin-top: 1rem; }
         .CodeMirror {
             border: 1px solid #ced4da;
             border-radius: 0.375rem;
@@ -222,12 +223,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 </li>
                             </ul>
 
-                            <!-- Панель инструментов для визуального редактора -->
+                            <!-- Панель инструментов (расширенная) -->
                             <div class="editor-toolbar" id="toolbar_<?= $lang_code ?>">
                                 <button type="button" class="btn btn-outline-secondary btn-sm" data-command="bold" data-target="<?= $lang_code ?>"><b>Ж</b></button>
                                 <button type="button" class="btn btn-outline-secondary btn-sm" data-command="italic" data-target="<?= $lang_code ?>"><i>К</i></button>
                                 <button type="button" class="btn btn-outline-secondary btn-sm" data-command="underline" data-target="<?= $lang_code ?>"><u>Ч</u></button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" data-command="formatBlock" data-value="h1" data-target="<?= $lang_code ?>">H1</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" data-command="formatBlock" data-value="h2" data-target="<?= $lang_code ?>">H2</button>
                                 <button type="button" class="btn btn-outline-secondary btn-sm" data-command="formatBlock" data-value="h3" data-target="<?= $lang_code ?>">H3</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" data-command="formatBlock" data-value="h4" data-target="<?= $lang_code ?>">H4</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" data-command="formatBlock" data-value="h5" data-target="<?= $lang_code ?>">H5</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" data-command="formatBlock" data-value="h6" data-target="<?= $lang_code ?>">H6</button>
                                 <button type="button" class="btn btn-outline-secondary btn-sm" data-command="formatBlock" data-value="p" data-target="<?= $lang_code ?>">¶</button>
                                 <button type="button" class="btn btn-outline-secondary btn-sm" data-command="insertUnorderedList" data-target="<?= $lang_code ?>">• Список</button>
                                 <button type="button" class="btn btn-outline-secondary btn-sm" data-command="formatBlock" data-value="blockquote" data-target="<?= $lang_code ?>">“ ”</button>
@@ -377,11 +383,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     e.preventDefault();
                     const command = btn.dataset.command;
                     const value = btn.dataset.value || null;
+
                     if (command === 'formatBlock' && value) {
                         document.execCommand(command, false, value);
+                    } else if (command === 'insertUnorderedList') {
+                        document.execCommand('insertUnorderedList', false, null);
+                    } else if (command === 'removeFormat') {
+                        document.execCommand('removeFormat', false, null);
                     } else {
                         document.execCommand(command, false, null);
                     }
+
                     visualEditor.focus();
                     // Синхронизация после команды
                     const html = visualEditor.innerHTML;
@@ -413,7 +425,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     } else if (mode === 'html') {
                         editor.refresh();
                     } else if (mode === 'visual') {
-                        // Фокус на редакторе
                         setTimeout(() => visualEditor.focus(), 50);
                     }
                 });

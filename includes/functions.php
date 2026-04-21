@@ -104,12 +104,14 @@ function generateTOC($html) {
     if (empty($html)) return [];
 
     $toc = [];
-    preg_match_all('/<h3>(.*?)<\/h3>/i', $html, $matches, PREG_SET_ORDER);
+    // Ищем все заголовки h1-h6
+    preg_match_all('/<h([1-6])>(.*?)<\/h\1>/i', $html, $matches, PREG_SET_ORDER);
 
     foreach ($matches as $index => $match) {
-        $title = strip_tags($match[1]);
+        $level = $match[1];
+        $title = strip_tags($match[2]);
         $id = 'section-' . ($index + 1) . '-' . preg_replace('/[^a-z0-9]+/', '-', strtolower(transliterate($title)));
-        $toc[] = ['id' => $id, 'title' => $title];
+        $toc[] = ['id' => $id, 'title' => $title, 'level' => $level];
     }
     return $toc;
 }
@@ -121,11 +123,12 @@ function addAnchorsToHeadings($html) {
     if (empty($html)) return $html;
 
     $index = 1;
-    return preg_replace_callback('/<h3>(.*?)<\/h3>/i', function($matches) use (&$index) {
-        $title = strip_tags($matches[1]);
+    return preg_replace_callback('/<h([1-6])>(.*?)<\/h\1>/i', function($matches) use (&$index) {
+        $level = $matches[1];
+        $title = strip_tags($matches[2]);
         $id = 'section-' . $index . '-' . preg_replace('/[^a-z0-9]+/', '-', strtolower(transliterate($title)));
         $index++;
-        return "<h3 id=\"{$id}\">{$matches[1]}</h3>";
+        return "<h{$level} id=\"{$id}\">{$matches[2]}</h{$level}>";
     }, $html);
 }
 

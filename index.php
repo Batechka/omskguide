@@ -13,10 +13,36 @@ if ($basePath && strpos($request, $basePath) === 0) {
     $request = trim($request, '/');
 }
 
+
+// Проверяем, есть ли параметр lang в URL и сохраняем его в сессию
+session_start();
+
+if (isset($_GET['lang']) && in_array($_GET['lang'], ['ru', 'en'])) {
+
+    // сохраняем язык
+    $_SESSION['lang'] = $_GET['lang'];
+
+    // берем текущие GET параметры
+    $params = $_GET;
+
+    // удаляем lang из URL
+    unset($params['lang']);
+
+    // собираем чистый URL
+    $redirectUrl = $_SERVER['PHP_SELF'];
+
+    if (!empty($params)) {
+        $redirectUrl .= '?' . http_build_query($params);
+    }
+
+    header("Location: $redirectUrl");
+    exit;
+}
+
 // --- Маршрутизация ---
 
 // 1. Главная страница
-if ($request === '' || $request === 'index.php') {
+if (empty($request) || $request === 'index.php') {
     $categories = getCategories();
     $selected_category = $_GET['category'] ?? null;
     $search_query = trim($_GET['search'] ?? '');
@@ -178,7 +204,7 @@ if ($request === '' || $request === 'index.php') {
                         .then(data => {
                             if (data.length) {
                                 suggestionsBox.innerHTML = data.map(item =>
-                                    `<a href="${item.slug}" class="suggestion-item">${item.title}</a>`
+                                    `<a href="<?= BASE_URL ?>${item.slug}" class="suggestion-item">${item.title}</a>`
                                 ).join('');
                             } else {
                                 suggestionsBox.innerHTML = '<div class="no-suggestions">Ничего не найдено</div>';
