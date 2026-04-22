@@ -365,4 +365,92 @@ function advancedFuzzySearch($query, $lang = 'ru', $limit = 10) {
 
     return array_slice($scored, 0, $limit);
 }
+
+function getAllRoutes($lang = null) {
+    global $pdo;
+    if (!$lang) $lang = $_SESSION['lang'] ?? 'ru';
+    $sql = "SELECT r.id, r.slug, r.distance, r.duration, r.stops_count, r.is_popular,
+                   rt.title, rt.short_description
+            FROM routes r
+            JOIN route_translations rt ON r.id = rt.route_id AND rt.language_code = ?
+            ORDER BY r.is_popular DESC, r.id";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$lang]);
+    return $stmt->fetchAll();
+}
+
+function getRouteBySlug($slug, $lang = null) {
+    global $pdo;
+    if (!$lang) $lang = $_SESSION['lang'] ?? 'ru';
+    $sql = "SELECT r.*, rt.title, rt.short_description, rt.full_description
+            FROM routes r
+            JOIN route_translations rt ON r.id = rt.route_id AND rt.language_code = ?
+            WHERE r.slug = ?";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$lang, $slug]);
+    return $stmt->fetch();
+}
+
+function getRouteStops($route_id, $lang = null) {
+    global $pdo;
+    if (!$lang) $lang = $_SESSION['lang'] ?? 'ru';
+
+    $sql = "SELECT rs.*,
+                   t.title AS attraction_title,
+                   a.slug AS attraction_slug,
+                   (SELECT filename FROM images WHERE attraction_id = a.id AND is_primary = 1 LIMIT 1) AS image
+            FROM route_stops rs
+            LEFT JOIN attractions a ON rs.attraction_id = a.id
+            LEFT JOIN attraction_translations t ON a.id = t.attraction_id AND t.language_code = :lang
+            WHERE rs.route_id = :route_id
+            ORDER BY rs.stop_order";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute(['route_id' => $route_id, 'lang' => $lang]);
+    return $stmt->fetchAll();
+}
+
+function getRouteRecommendations($route_id, $type = null) {
+    global $pdo;
+    $sql = "SELECT * FROM route_recommendations WHERE route_id = ?";
+    if ($type) {
+        $sql .= " AND type = ?";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$route_id, $type]);
+    } else {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$route_id]);
+    }
+    return $stmt->fetchAll();
+}
+
+function getFilteredAttractionsPaginated($category_id = null, $search = '', $limit = 9, $offset = 0, $lang = null) {
+    global $pdo;
+    if (!$lang) $lang = $_SESSION['lang'] ?? 'ru';
+
+    $sql = "SELECT a.id, a.slug, a.views_count, t.title, t.short_description,
+                   (SELECT filename FROM images WHERE attraction_id = a.id AND is_primary = 1 LIMIT 1) as primary_image
+            FROM attractions a
+            JOIN attraction_translations t ON a.id = t.attraction_id AND t.language_code = :lang";
+    $params = ['lang' => $lang];
+
+    if ($category_id) {
+        $sql .= " AND a.category_id = :category_id";
+        $params['category_id'] = $category_id;
+    }
+    if ($search) {
+        $sql .= " AND (t.title LIKE :search OR t.short_description LIKE :search)";
+        $params['search'] = '%' . $search . '%';
+    }
+    $sql .= " ORDER BY a.id LIMIT :limit OFFSET :offset";
+
+    $stmt = $pdo->prepare($sql);
+    foreach ($params as $key => $val) {
+        $stmt->bindValue($key, $val);
+    }
+    $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
+    $stmt->execute();
+    return $stmt->fetchAll();
+}
 ?>
+

@@ -1,0 +1,332 @@
+/* ===== ДЕТАЛЬНАЯ СТРАНИЦА МАРШРУТА ===== */
+
+.route-hero {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 2rem;
+  margin: 2rem 0;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+
+.route-hero h1 {
+  font-size: 2.8rem;
+  margin-bottom: 1rem;
+  color: var(--text);
+  background: none;
+  -webkit-background-clip: unset;
+  background-clip: unset;
+  color: var(--text);
+}
+
+.route-hero p {
+  font-size: 1.2rem;
+  color: var(--muted);
+  margin-bottom: 1.5rem;
+}
+
+.route-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem 3rem;
+  margin: 1.5rem 0;
+  padding: 1rem 0;
+  border-top: 1px dashed var(--border);
+  border-bottom: 1px dashed var(--border);
+  font-size: 1.1rem;
+  color: var(--text);
+}
+
+.route-stats span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Карта */
+#routeMap {
+  margin-top: 1.5rem;
+  z-index: 1;
+}
+
+/* Пошаговый маршрут */
+.stops-list {
+  margin: 2rem 0 3rem;
+}
+
+.stop-item {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  transition: var(--transition);
+}
+
+.stop-item:hover {
+  box-shadow: var(--shadow);
+}
+
+.stop-number {
+  font-family: "Playfair Display", serif;
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--primary);
+  line-height: 1;
+  min-width: 4rem;
+  text-align: center;
+}
+
+.stop-content {
+  flex: 1;
+}
+
+.stop-content h3 {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+  font-size: 1.5rem;
+}
+
+.stop-content p {
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+
+.stop-content img {
+  border-radius: 12px;
+  margin-top: 0.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.walk-time {
+  margin-top: 1rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--border);
+  color: var(--primary-dark);
+  font-weight: 500;
+  font-style: italic;
+}
+
+/* Блоки рекомендаций */
+.recommendations-block {
+  background: linear-gradient(145deg, #faf6f2, #fff);
+  padding: 1.5rem 2rem;
+  border-radius: var(--radius);
+  margin: 2rem 0;
+  border-left: 6px solid var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+body.dark-theme .recommendations-block {
+  background: linear-gradient(145deg, #2c2724, #1f1c1a);
+  border-left-color: var(--primary-light);
+}
+
+.recommendations-block h3 {
+  margin-top: 0;
+  margin-bottom: 1.2rem;
+  font-family: "Playfair Display", serif;
+  color: var(--primary-dark);
+}
+
+body.dark-theme .recommendations-block h3 {
+  color: var(--primary-light);
+}
+
+.recommendations-block ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.recommendations-block li {
+  margin-bottom: 0.8rem;
+  padding-left: 1.5rem;
+  position: relative;
+}
+
+.recommendations-block li::before {
+  content: "•";
+  color: var(--primary);
+  font-weight: bold;
+  position: absolute;
+  left: 0;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .route-hero {
+    padding: 1.5rem;
+  }
+  .route-hero h1 {
+    font-size: 2.2rem;
+  }
+  .route-stats {
+    gap: 1rem;
+    font-size: 1rem;
+  }
+  .stop-item {
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1.2rem;
+  }
+  .stop-number {
+    font-size: 2.5rem;
+    text-align: left;
+  }
+  .recommendations-block {
+    padding: 1.2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .route-hero h1 {
+    font-size: 1.8rem;
+  }
+  .route-hero p {
+    font-size: 1rem;
+  }
+  .route-stats {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .stop-content h3 {
+    font-size: 1.3rem;
+  }
+}
+/* ===== ОЧЕНЬ ХОРОШАЯ АДАПТИВНОСТЬ ДЛЯ ТЕЛЕФОНА ===== */
+@media (max-width: 600px) {
+  .container {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .route-hero {
+    padding: 1.25rem;
+    margin: 1rem 0 1.5rem;
+    border-radius: 20px;
+  }
+
+  .route-hero h1 {
+    font-size: 1.9rem;
+    line-height: 1.2;
+    margin-bottom: 0.75rem;
+  }
+
+  .route-hero p {
+    font-size: 1rem;
+    line-height: 1.5;
+    margin-bottom: 1rem;
+  }
+
+  .route-stats {
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 0.8rem 0;
+    margin: 1rem 0;
+    font-size: 1rem;
+  }
+
+  #routeMap {
+    height: 220px !important;
+    border-radius: 16px;
+    margin-top: 1rem;
+  }
+
+  h2 {
+    font-size: 1.7rem;
+    margin: 1.5rem 0 1rem;
+  }
+
+  .stop-item {
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1.2rem;
+    margin-bottom: 1.2rem;
+    border-radius: 18px;
+  }
+
+  .stop-number {
+    font-size: 2.2rem;
+    min-width: auto;
+    text-align: left;
+  }
+
+  .stop-content h3 {
+    font-size: 1.35rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .stop-content p {
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+
+  .stop-content img {
+    max-width: 100% !important;
+    width: 100%;
+    height: auto;
+    border-radius: 12px;
+    margin-top: 0.5rem;
+  }
+
+  .walk-time {
+    font-size: 0.95rem;
+    margin-top: 0.8rem;
+    padding-top: 0.8rem;
+  }
+
+  .recommendations-block {
+    padding: 1.25rem 1.25rem;
+    margin: 1.5rem 0;
+    border-radius: 18px;
+    border-left-width: 5px;
+  }
+
+  .recommendations-block h3 {
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+  }
+
+  .recommendations-block li {
+    font-size: 0.95rem;
+    margin-bottom: 0.6rem;
+    padding-left: 1.3rem;
+  }
+
+  .btn {
+    display: block;
+    width: 100%;
+    text-align: center;
+    padding: 0.8rem 1rem;
+    font-size: 1rem;
+    margin-top: 0.5rem;
+  }
+
+  .breadcrumbs {
+    font-size: 0.9rem;
+    margin: 1rem 0 0.5rem;
+    flex-wrap: wrap;
+  }
+}
+
+/* Для очень маленьких экранов (до 400px) */
+@media (max-width: 400px) {
+  .route-hero h1 {
+    font-size: 1.7rem;
+  }
+
+  .stop-number {
+    font-size: 2rem;
+  }
+
+  .stop-content h3 {
+    font-size: 1.25rem;
+  }
+
+  #routeMap {
+    height: 200px !important;
+  }
+}

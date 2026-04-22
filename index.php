@@ -1,5 +1,4 @@
 <?php
-
 session_start();
 
 require_once 'includes/config.php';
@@ -10,68 +9,93 @@ require_once 'includes/functions.php';
 | Язык сайта
 |--------------------------------------------------------------------------
 */
-
-if (isset($_GET['lang']) && in_array($_GET['lang'], ['ru','en'])) {
-
+if (isset($_GET['lang']) && in_array($_GET['lang'], ['ru', 'en'])) {
     $_SESSION['lang'] = $_GET['lang'];
-
     $params = $_GET;
     unset($params['lang']);
-
     $redirectUrl = strtok($_SERVER["REQUEST_URI"], '?');
-
     if (!empty($params)) {
         $redirectUrl .= '?' . http_build_query($params);
     }
-
     header("Location: $redirectUrl");
     exit;
 }
-
 $lang = $_SESSION['lang'] ?? 'ru';
-
 
 /*
 |--------------------------------------------------------------------------
 | Определяем текущий запрос
 |--------------------------------------------------------------------------
 */
-
 $request = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
 
+// Убираем подпапку, если сайт в ней (например, /omsk/)
 $basePath = trim(parse_url(BASE_URL, PHP_URL_PATH), '/');
-
-if ($basePath && str_starts_with($request, $basePath)) {
+if ($basePath && strpos($request, $basePath) === 0) {
     $request = substr($request, strlen($basePath));
     $request = trim($request, '/');
 }
 
+// Если запрос пустой или index.php — считаем главной
+if ($request === 'index.php') {
+    $request = '';
+}
+
+/*
+|--------------------------------------------------------------------------
+| Проверка маршрутов
+|--------------------------------------------------------------------------
+// Проверка маршрутов: /routes и /routes/любой-slug
+*/
+// Проверка маршрутов: /routes и /routes/слаг
+if ($request === 'routes' || strpos($request, 'routes/') === 0) {
+    if ($request === 'routes') {
+        // Каталог маршрутов
+        $routes = getAllRoutes();
+        $pageTitle = $lang == 'ru' ? 'Маршруты по Омску' : 'Omsk Routes';
+        $pageDescription = $lang == 'ru'
+            ? 'Готовые пешие маршруты по Омску: от исторического центра до кофейных прогулок.'
+            : 'Ready-made walking routes around Omsk: from historic center to coffee walks.';
+        $ogImage = BASE_URL . 'uploads/hero-bg.jpg';
+        $canonicalUrl = BASE_URL . 'routes';
+        require_once 'routes.php';
+        exit;
+    } else {
+        // Детальная страница маршрута
+        $routeSlug = substr($request, 7); // убираем 'routes/'
+        $route = getRouteBySlug($routeSlug);
+        if ($route) {
+            $slug = $routeSlug;
+            require_once 'route-detail.php';
+            exit;
+        }
+    }
+}
 
 /*
 |--------------------------------------------------------------------------
 | Главная страница
 |--------------------------------------------------------------------------
 */
-
 if ($request === '' || $request === 'index.php') {
-
     $categories = getCategories();
-
     $selected_category = $_GET['category'] ?? null;
     $search_query = trim($_GET['search'] ?? '');
 
-    $attractions = getFilteredAttractions($selected_category, $search_query);
+    // --- ПАГИНАЦИЯ ---
+    $limit = 6;
+    $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+    $offset = ($page - 1) * $limit;
+    $totalAttractions = $pdo->query("SELECT COUNT(*) FROM attractions")->fetchColumn();
+    $attractions = getFilteredAttractionsPaginated($selected_category, $search_query, $limit, $offset);
+    // --- КОНЕЦ ПАГИНАЦИИ ---
 
     $pageTitle = __('site_title');
-
     $pageDescription = $lang === 'ru'
         ? 'Достопримечательности Омска: исторические места, памятники, храмы и улицы.'
         : 'Omsk landmarks: historical places, monuments, churches and streets.';
-
     $ogImage = BASE_URL . 'uploads/hero-bg.jpg';
-
     $canonicalUrl = strtok(BASE_URL . $_SERVER['REQUEST_URI'], '?');
-
 ?>
 <!DOCTYPE html>
 <html lang="<?= htmlspecialchars($lang) ?>">
@@ -98,6 +122,7 @@ if ($request === '' || $request === 'index.php') {
 
         <link rel="stylesheet" href="<?= BASE_URL ?>css/style.css">
         <link rel="stylesheet" href="<?= BASE_URL ?>css/faq.css">
+        <link rel="stylesheet" href="css/card.css">
 
         <?php include 'includes/metrica.php'; ?>
 
@@ -112,7 +137,9 @@ if ($request === '' || $request === 'index.php') {
                 </a>
                 <div class="nav-links">
                     <a href="<?= BASE_URL ?>" class="nav-link"><?= __('home') ?></a>
+                    <a href="<?= BASE_URL ?>routes" class="nav-link"><?= $lang == 'ru' ? 'Маршруты' : 'Routes' ?></a>
                     <a href="<?= BASE_URL ?>about" class="nav-link"><?= $lang == 'ru' ? 'О проекте' : 'About' ?></a>
+
                     <?php if (isset($_SESSION['admin_logged_in'])): ?>
                         <a href="<?= BASE_URL ?>admin/" class="nav-link">Админка</a>
                         <a href="<?= BASE_URL ?>admin/logout.php" class="nav-link">Выход</a>
@@ -143,6 +170,38 @@ if ($request === '' || $request === 'index.php') {
                 <a href="#explore" class="hero-btn"><?= __('hero_button') ?></a>
             </div>
         </section>
+
+
+        <?php
+            $popularRoutes = $pdo->query("
+                SELECT r.slug, rt.title, r.distance, r.duration, r.stops_count
+                FROM routes r
+                JOIN route_translations rt ON r.id = rt.route_id AND rt.language_code = '{$lang}'
+                WHERE r.is_popular = 1
+                LIMIT 3
+            ")->fetchAll();
+            if (!empty($popularRoutes)):
+            ?>
+            <section class="popular-routes container">
+                <h2><?= $lang == 'ru' ? 'Популярные маршруты' : 'Popular Routes' ?></h2>
+                <div class="routes-grid">
+                    <?php foreach ($popularRoutes as $pr): ?>
+                        <div class="route-card">
+                            <h3>📍 <?= htmlspecialchars($pr['title']) ?></h3>
+                            <div class="route-meta">
+                                <?php if ($pr['distance']): ?><span>🚶 <?= $pr['distance'] ?></span><?php endif; ?>
+                                <?php if ($pr['duration']): ?><span>⏱ <?= $pr['duration'] ?></span><?php endif; ?>
+                                <?php if ($pr['stops_count']): ?><span>📍 <?= $pr['stops_count'] ?> остановок</span><?php endif; ?>
+                            </div>
+                            <a href="<?= BASE_URL ?>routes/<?= urlencode($pr['slug']) ?>" class="btn">
+                                <?= $lang == 'ru' ? 'Смотреть маршрут' : 'View route' ?>
+                            </a>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+                <a href="<?= BASE_URL ?>routes" class="btn btn-outline"><?= $lang == 'ru' ? 'Все маршруты' : 'All routes' ?></a>
+            </section>
+            <?php endif; ?>
 
         <main class="container" id="explore">
             <h1><?= __('attractions') ?> Омска</h1>
@@ -186,7 +245,15 @@ if ($request === '' || $request === 'index.php') {
                         </div>
                     </article>
                 <?php endforeach; ?>
+
             </div>
+                <?php if (count($attractions) == $limit && ($offset + $limit) < $totalAttractions): ?>
+                    <div class="load-more-container">
+                        <button id="loadMoreBtn" class="btn btn-outline load-more-btn" data-page="<?= $page + 1 ?>">
+                            <?= $lang == 'ru' ? 'Показать ещё' : 'Load more' ?>
+                        </button>
+                    </div>
+                <?php endif; ?>
         </main>
 
         <!-- faq -->
@@ -282,11 +349,70 @@ if ($request === '' || $request === 'index.php') {
                 });
 
                 const observer = new IntersectionObserver((entries) => {
-                    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('visible');
+                        }
+                    });
                 }, { threshold: 0.1 });
                 document.querySelectorAll('.animate-on-scroll').forEach(el => observer.observe(el));
             })();
         </script>
+        <script>
+            let currentPage = 2;
+            const loadMoreBtn = document.getElementById('loadMoreBtn');
+            const container = document.querySelector('.attractions-grid');
+
+            if (loadMoreBtn) {
+                loadMoreBtn.addEventListener('click', function() {
+                    const btn = this;
+                    btn.disabled = true;
+                    btn.textContent = '<?= $lang == 'ru' ? 'Загрузка...' : 'Loading...' ?>';
+
+                    const url = new URL('<?= BASE_URL ?>ajax_load_more.php', window.location.origin);
+                    url.searchParams.set('page', currentPage);
+                    url.searchParams.set('ajax', '1');
+                    // Передаём текущие фильтры
+                    const params = new URLSearchParams(window.location.search);
+                    if (params.has('category')) url.searchParams.set('category', params.get('category'));
+                    if (params.has('search')) url.searchParams.set('search', params.get('search'));
+
+                    fetch(url)
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.html) {
+                                container.insertAdjacentHTML('beforeend', data.html);
+                                currentPage++;
+                                btn.dataset.page = currentPage;
+                                btn.textContent = '<?= $lang == 'ru' ? 'Показать ещё' : 'Load more' ?>';
+                                btn.disabled = false;
+
+                                // Обновляем анимации для новых карточек
+                                const observer = new IntersectionObserver((entries) => {
+                                    entries.forEach(entry => {
+                                        if (entry.isIntersecting) {
+                                            entry.target.classList.add('visible');
+                                        }
+                                    });
+                                }, { threshold: 0.1 });
+
+                                document.querySelectorAll('.attraction-card:not(.visible)').forEach(card => {
+                                    observer.observe(card);
+                                });
+
+                                if (!data.hasMore) btn.remove();
+                            } else {
+                                btn.remove();
+                            }
+                        })
+                        .catch(err => {
+                            console.error(err);
+                            btn.textContent = '<?= $lang == 'ru' ? 'Ошибка' : 'Error' ?>';
+                            btn.disabled = false;
+                        });
+                });
+            }
+            </script>
     </body>
     </html>
 <?php
@@ -314,8 +440,8 @@ if ($attraction) {
 |--------------------------------------------------------------------------
 */
 
-if (in_array($request, ['about','privacy','terms'])) {
-    require $request . '.php';
+if (in_array($request, ['about', 'privacy', 'terms', 'omsk-1-day', 'omsk-with-kids', 'omsk-photo-spots'])) {
+    require_once $request . '.php';
     exit;
 }
 

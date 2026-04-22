@@ -21,6 +21,9 @@ $attractions = getAllAttractionsAdmin();
                 <a href="../index.php" class="btn btn-outline-light btn-sm"><?= __('home') ?></a>
                 <a href="logout.php" class="btn btn-outline-light btn-sm"><?= __('logout') ?></a>
                 <a href="categories.php" class="btn btn-outline-light btn-sm"><?=__('categories') ?></a>
+                <a href="route_edit.php"  class="btn btn-outline-light btn-sm">редактироваие маршрута</a>
+                <a href="route_stops.php"  class="btn btn-outline-light btn-sm">редактироваие маршрута точки</a>
+                <a href="routes.php"  class="btn btn-outline-light btn-sm">список маршрутов</a>
             </div>
         </div>
     </nav>

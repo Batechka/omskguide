@@ -1,0 +1,95 @@
+/* ===== СТИЛИ ДЛЯ МАРШРУТОВ (главная и каталог) ===== */
+.routes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 2rem;
+    margin: 2.5rem 0;
+}
+
+.route-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 1.8rem;
+    box-shadow: var(--shadow);
+    transition: all var(--transition);
+    border: 1px solid rgba(0, 0, 0, 0.02);
+    display: flex;
+    flex-direction: column;
+}
+
+.route-card:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-hover);
+    border-color: rgba(179, 78, 58, 0.15);
+}
+
+.route-card h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.6rem;
+    margin: 0 0 0.75rem 0;
+    color: var(--text);
+}
+
+.route-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.2rem;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.route-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+}
+
+.route-card .btn {
+    margin-top: auto;
+    align-self: flex-start;
+}
+
+.btn-outline {
+    background: transparent;
+    color: var(--primary);
+    border: 2px solid var(--primary);
+    box-shadow: none;
+}
+
+.btn-outline:hover {
+    background: var(--primary);
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 16px rgba(179, 78, 58, 0.2);
+}
+
+/* Блок популярных маршрутов */
+.popular-routes {
+    margin: 2rem auto 3rem;
+}
+
+.popular-routes h2 {
+    text-align: center;
+    font-family: 'Playfair Display', serif;
+    font-size: 2.2rem;
+    margin-bottom: 1.5rem;
+    color: var(--text);
+}
+
+.popular-routes .btn-outline {
+    display: inline-block;
+    margin-top: 1rem;
+    text-align: center;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .routes-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+    .route-card h3 {
+        font-size: 1.4rem;
+    }
+}
