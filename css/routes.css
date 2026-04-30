@@ -330,3 +330,83 @@ body.dark-theme .recommendations-block h3 {
     height: 200px !important;
   }
 }
+.route-hero {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 2rem;
+    margin: 2rem 0;
+    box-shadow: var(--shadow);
+}
+.route-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem 3rem;
+    margin: 1.5rem 0;
+    padding: 1rem 0;
+    border-top: 1px dashed var(--border);
+    border-bottom: 1px dashed var(--border);
+    font-size: 1.1rem;
+}
+.map-links {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+.route-full-description {
+    background: var(--bg);
+    padding: 1.5rem;
+    border-radius: var(--radius);
+    margin: 2rem 0;
+}
+.stops-list {
+    margin: 2rem 0;
+}
+.stop-item {
+    display: flex;
+    gap: 2rem;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+}
+.stop-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: var(--primary);
+    min-width: 3rem;
+}
+.stop-content img {
+    max-width: 100%;
+    border-radius: 12px;
+    margin-top: 1rem;
+}
+.walk-time {
+    margin-top: 1rem;
+    color: var(--primary-dark);
+    font-style: italic;
+}
+.recommendations-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin: 2rem 0;
+}
+.faq-block {
+    background: var(--bg);
+    padding: 2rem;
+    border-radius: var(--radius);
+    margin: 2rem 0;
+}
+.faq-item {
+    margin-bottom: 1rem;
+}
+@media (max-width: 768px) {
+    .recommendations-grid {
+        grid-template-columns: 1fr;
+    }
+    .stop-item {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}

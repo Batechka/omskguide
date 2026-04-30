@@ -48,21 +48,20 @@ if ($request === 'index.php') {
 // Проверка маршрутов: /routes и /routes/любой-slug
 */
 // Проверка маршрутов: /routes и /routes/слаг
-if ($request === 'routes' || strpos($request, 'routes/') === 0) {
-    if ($request === 'routes') {
-        // Каталог маршрутов
+// Проверка маршрутов: /kuda-shodit-v-omske и /kuda-shodit-v-omske/слаг
+if ($request === 'kuda-shodit-v-omske' || strpos($request, 'kuda-shodit-v-omske/') === 0) {
+    if ($request === 'kuda-shodit-v-omske') {
         $routes = getAllRoutes();
         $pageTitle = $lang == 'ru' ? 'Маршруты по Омску' : 'Omsk Routes';
         $pageDescription = $lang == 'ru'
             ? 'Готовые пешие маршруты по Омску: от исторического центра до кофейных прогулок.'
             : 'Ready-made walking routes around Omsk: from historic center to coffee walks.';
         $ogImage = BASE_URL . 'uploads/hero-bg.jpg';
-        $canonicalUrl = BASE_URL . 'routes';
-        require_once 'routes.php';
+        $canonicalUrl = BASE_URL . 'kuda-shodit-v-omske';
+        require_once 'kuda-shodit-v-omske.php';
         exit;
     } else {
-        // Детальная страница маршрута
-        $routeSlug = substr($request, 7); // убираем 'routes/'
+        $routeSlug = substr($request, strlen('kuda-shodit-v-omske/'));
         $route = getRouteBySlug($routeSlug);
         if ($route) {
             $slug = $routeSlug;
@@ -90,13 +89,20 @@ if ($request === '' || $request === 'index.php') {
     $attractions = getFilteredAttractionsPaginated($selected_category, $search_query, $limit, $offset);
     // --- КОНЕЦ ПАГИНАЦИИ ---
 
-    $pageTitle = __('site_title');
+    $pageTitle = $lang == 'ru'
+    ? 'Достопримечательности Омска: куда сходить, что посмотреть, фото и описания — Омскъ Исторический'
+    : 'Omsk Landmarks: What to See, Photos, Descriptions, Map — Historical Omsk';
     $pageDescription = $lang === 'ru'
-        ? 'Достопримечательности Омска: исторические места, памятники, храмы и улицы.'
-        : 'Omsk landmarks: historical places, monuments, churches and streets.';
+    ? 'Достопримечательности Омска: куда сходить, что посмотреть, где погулять. Полный путеводитель по Омску с фото, описаниями, маршрутами и советами.'
+    : 'Omsk landmarks: what to see, where to walk, photos, descriptions, routes and tips.';
     $ogImage = BASE_URL . 'uploads/hero-bg.jpg';
     $canonicalUrl = strtok(BASE_URL . $_SERVER['REQUEST_URI'], '?');
+
+
+
 ?>
+
+
 <!DOCTYPE html>
 <html lang="<?= htmlspecialchars($lang) ?>">
     <head>
@@ -130,38 +136,15 @@ if ($request === '' || $request === 'index.php') {
 
 
     <body>
-        <header class="site-header">
-            <div class="container header-inner">
-                <a href="<?= BASE_URL ?>" class="site-title">
-                    <span>Омскъ</span> Исторический
-                </a>
-                <div class="nav-links">
-                    <a href="<?= BASE_URL ?>" class="nav-link"><?= __('home') ?></a>
-                    <a href="<?= BASE_URL ?>routes" class="nav-link"><?= $lang == 'ru' ? 'Маршруты' : 'Routes' ?></a>
-                    <a href="<?= BASE_URL ?>about" class="nav-link"><?= $lang == 'ru' ? 'О проекте' : 'About' ?></a>
-
-                    <?php if (isset($_SESSION['admin_logged_in'])): ?>
-                        <a href="<?= BASE_URL ?>admin/" class="nav-link">Админка</a>
-                        <a href="<?= BASE_URL ?>admin/logout.php" class="nav-link">Выход</a>
-                    <?php endif; ?>
-                    <div class="lang-switch">
-                        <a href="?lang=ru" class="lang-btn <?= $lang=='ru'?'active':'' ?>">RU</a>
-                        <a href="?lang=en" class="lang-btn <?= $lang=='en'?'active':'' ?>">EN</a>
-                    </div>
-                    <div class="accessibility-controls">
-                        <button class="theme-toggle" data-theme="light" title="Светлая тема">☀️</button>
-                        <button class="theme-toggle" data-theme="dark" title="Тёмная тема">🌙</button>
-                        <button class="font-size-btn" data-size="increase" title="Увеличить шрифт">A+</button>
-                        <button class="font-size-btn" data-size="reset" title="Сбросить">A</button>
-                    </div>
-                </div>
-            </div>
-        </header>
+        <?php
+            $slugForLang = '';
+            include 'components/header.php';
+        ?>
 
         <!-- HERO БАННЕР -->
         <section class="hero">
             <div class="hero-background">
-                <img src="<?= UPLOAD_URL ?>e83ce0b649358602599a9b4f6c72a4e5.jpg" alt="Панорама Омска" loading="eager">
+                <img src="<?= UPLOAD_URL ?>e83ce0b649358602599a9b4f6c72a4e5.jpg" alt="Панорама Омска — достопримечательности исторического центра" loading="eager">
                 <div class="hero-overlay"></div>
             </div>
             <div class="hero-content container">
@@ -174,7 +157,7 @@ if ($request === '' || $request === 'index.php') {
 
         <?php
             $popularRoutes = $pdo->query("
-                SELECT r.slug, rt.title, r.distance, r.duration, r.stops_count
+                SELECT r.slug, rt.title, rt.short_description, r.distance, r.duration, r.stops_count
                 FROM routes r
                 JOIN route_translations rt ON r.id = rt.route_id AND rt.language_code = '{$lang}'
                 WHERE r.is_popular = 1
@@ -193,18 +176,21 @@ if ($request === '' || $request === 'index.php') {
                                 <?php if ($pr['duration']): ?><span>⏱ <?= $pr['duration'] ?></span><?php endif; ?>
                                 <?php if ($pr['stops_count']): ?><span>📍 <?= $pr['stops_count'] ?> остановок</span><?php endif; ?>
                             </div>
-                            <a href="<?= BASE_URL ?>routes/<?= urlencode($pr['slug']) ?>" class="btn">
+                            <?php if (!empty($pr['short_description'])): ?>
+                                <p class="route-description"><?= htmlspecialchars($pr['short_description']) ?></p>
+                            <?php endif; ?>
+                            <a href="<?= BASE_URL ?>kuda-shodit-v-omske/<?= urlencode($pr['slug']) ?>" class="btn">
                                 <?= $lang == 'ru' ? 'Смотреть маршрут' : 'View route' ?>
                             </a>
                         </div>
                     <?php endforeach; ?>
                 </div>
-                <a href="<?= BASE_URL ?>routes" class="btn btn-outline"><?= $lang == 'ru' ? 'Все маршруты' : 'All routes' ?></a>
+                <a href="<?= BASE_URL ?>kuda-shodit-v-omske" class="btn btn-outline"><?= $lang == 'ru' ? 'Все маршруты' : 'All routes' ?></a>
             </section>
             <?php endif; ?>
 
         <main class="container" id="explore">
-            <h1><?= __('attractions') ?> Омска</h1>
+            <h2 class="main-title"><?= __('attractions') ?> Омска</h2>
 
             <!-- Поиск -->
             <div class="search-wrapper">
@@ -215,12 +201,11 @@ if ($request === '' || $request === 'index.php') {
             </div>
 
             <!-- Категории -->
-            <div class="category-filter">
-                <a href="<?= BASE_URL ?>" class="category-link <?= !$selected_category ? 'active' : '' ?>">
-                    <?= $lang=='ru' ? 'Все' : 'All' ?>
-                </a>
+            <div class="category-filter" id="categoryFilter">
+                <a href="#" class="category-link <?= !$selected_category ? 'active' : '' ?>" data-category=""><?= $lang=='ru' ? 'Все' : 'All' ?></a>
                 <?php foreach($categories as $cat): ?>
-                    <a href="?category=<?= $cat['id'] ?>" class="category-link <?= $selected_category==$cat['id'] ? 'active' : '' ?>">
+                    <a href="#" class="category-link <?= $selected_category==$cat['id'] ? 'active' : '' ?>"
+                    data-category="<?= $cat['id'] ?>" style="border-left: 6px solid <?= htmlspecialchars($cat['color']) ?>;">
                         <?= htmlspecialchars($cat['name']) ?>
                     </a>
                 <?php endforeach; ?>
@@ -232,7 +217,7 @@ if ($request === '' || $request === 'index.php') {
                     <article class="attraction-card animate-on-scroll">
                         <?php if (!empty($item['primary_image'])): ?>
                             <img src="<?= UPLOAD_URL . htmlspecialchars($item['primary_image']) ?>"
-                                 class="card-img" alt="<?= htmlspecialchars($item['title']) ?>" loading="lazy">
+     class="card-img" alt="<?= htmlspecialchars($item['title']) ?> — достопримечательность Омска" loading="lazy">
                         <?php else: ?>
                             <div class="card-img placeholder-img"></div>
                         <?php endif; ?>
@@ -414,6 +399,47 @@ if ($request === '' || $request === 'index.php') {
             }
             </script>
     </body>
+    <script>
+    // AJAX-фильтрация по категориям
+    document.querySelectorAll('.category-link').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const categoryId = this.dataset.category;
+
+            // Обновляем активный класс
+            document.querySelectorAll('.category-link').forEach(l => l.classList.remove('active'));
+            this.classList.add('active');
+
+            // Обновляем URL без перезагрузки
+            const url = new URL(window.location);
+            if (categoryId) {
+                url.searchParams.set('category', categoryId);
+            } else {
+                url.searchParams.delete('category');
+            }
+            history.pushState({}, '', url);
+
+            // Сбрасываем пагинацию (скрываем кнопку "Показать ещё", обнуляем текущую страницу)
+            const loadMoreBtn = document.getElementById('loadMoreBtn');
+            if (loadMoreBtn) loadMoreBtn.style.display = 'none';
+            currentPage = 2;
+
+            // AJAX-запрос
+            fetch(`ajax_filter_attractions.php?category=${categoryId}&lang=<?= $lang ?>`)
+                .then(r => r.json())
+                .then(data => {
+                    document.querySelector('.attractions-grid').innerHTML = data.html;
+                    // Обновляем анимации
+                    const observer = new IntersectionObserver((entries) => {
+                        entries.forEach(entry => {
+                            if (entry.isIntersecting) entry.target.classList.add('visible');
+                        });
+                    }, { threshold: 0.1 });
+                    document.querySelectorAll('.attraction-card').forEach(card => observer.observe(card));
+                });
+        });
+    });
+    </script>
     </html>
 <?php
 exit;

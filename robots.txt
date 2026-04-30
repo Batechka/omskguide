@@ -1,12 +1,28 @@
+# robots.txt для omskguide.ru
+# Версия 2 от 23.04.2026
 User-agent: *
+
+# Служебные страницы и папки
 Disallow: /admin/
 Disallow: /includes/
 Disallow: /css/
-Disallow: /js/
+# Disallow: /js/
 Disallow: /lang/
 Disallow: /backups/
-Allow: /uploads/
+Disallow: /userprava/
+Disallow: /components/
+Disallow: /image/
+
+# Закрываем от индексации страницы с параметрами, чтобы избежать дублей
+# Важное дополнение
+
+# Разрешаем индексацию только самых важных ресурсов
 Allow: /css/style.css
-Allow: /js/*.js
+Allow: /js/
+Allow: /uploads/
+
+# Указываем главное зеркало для Яндекса
 Host: omskguide.ru
+
+# Карта сайта
 Sitemap: https://omskguide.ru/sitemap.xml

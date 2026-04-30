@@ -23,14 +23,15 @@ if ($id) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $slug = trim($_POST['slug'] ?? '');
+    $color = $_POST['color'] ?? '#b34e3a';
     if (empty($slug)) {
         $error = 'Slug обязателен';
     } else {
         try {
             if ($id) {
-                $pdo->prepare("UPDATE categories SET slug = ? WHERE id = ?")->execute([$slug, $id]);
+                $pdo->prepare("UPDATE categories SET slug = ?, color = ? WHERE id = ?")->execute([$slug, $color, $id]);
             } else {
-                $pdo->prepare("INSERT INTO categories (slug) VALUES (?)")->execute([$slug]);
+                $pdo->prepare("INSERT INTO categories (slug, color) VALUES (?, ?)")->execute([$slug, $color]);
                 $id = $pdo->lastInsertId();
             }
             foreach (['ru','en'] as $lang_code) {
@@ -84,6 +85,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </div>
                 <?php endforeach; ?>
+                <!-- Цвет категории -->
+                <div class="mt-3 mb-3">
+                    <label class="form-label">Цвет категории</label>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <?php
+                        $colors = ['#b34e3a','#e67e22','#f1c40f','#2ecc71','#3498db','#9b59b6','#1abc9c','#e74c3c'];
+                        foreach ($colors as $c) {
+                            $checked = (isset($category['color']) && $category['color'] == $c) ? '2px solid black' : 'none';
+                            echo "<button type='button' style='width:36px;height:36px;background:$c;border:$checked;border-radius:8px;margin:2px;' onclick=\"document.querySelector('[name=color]').value='$c'\"></button>";
+                        }
+                        ?>
+                    </div>
+                    <input type="color" name="color" id="colorPicker" class="form-control form-control-color mt-2"
+                        value="<?= htmlspecialchars($category['color'] ?? '#b34e3a') ?>"
+                        onchange="this.form.elements['color'].value = this.value">
+                    <small class="text-muted">Выберите цвет кнопками или палитрой</small>
+                </div>
             </div>
             <button type="submit" class="btn btn-primary">Сохранить</button>
         </form>

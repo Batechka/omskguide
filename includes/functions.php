@@ -20,11 +20,11 @@ function getAttractionBySlug($slug, $lang = null) {
     if (!$lang) $lang = $_SESSION['lang'] ?? 'ru';
 
     $sql = "SELECT a.id, a.slug, a.category_id, a.views_count, a.created_at,
-                   a.latitude, a.longitude,
-                   t.title, t.short_description, t.full_description
-            FROM attractions a
-            JOIN attraction_translations t ON a.id = t.attraction_id AND t.language_code = :lang
-            WHERE a.slug = :slug";
+               a.latitude, a.longitude, a.audio_file,
+               t.title, t.short_description, t.full_description
+        FROM attractions a
+        JOIN attraction_translations t ON a.id = t.attraction_id AND t.language_code = :lang
+        WHERE a.slug = :slug";
     $stmt = $pdo->prepare($sql);
     $stmt->execute(['slug' => $slug, 'lang' => $lang]);
     return $stmt->fetch();
@@ -157,7 +157,7 @@ function transliterate($text) {
 function getCategories($lang = null) {
     global $pdo;
     if (!$lang) $lang = $_SESSION['lang'] ?? 'ru';
-    $sql = "SELECT c.id, c.slug, ct.name
+    $sql = "SELECT c.id, c.slug, c.color, ct.name
             FROM categories c
             JOIN category_translations ct ON c.id = ct.category_id AND ct.language_code = ?
             ORDER BY ct.name";
@@ -398,7 +398,8 @@ function getRouteStops($route_id, $lang = null) {
     $sql = "SELECT rs.*,
                    t.title AS attraction_title,
                    a.slug AS attraction_slug,
-                   (SELECT filename FROM images WHERE attraction_id = a.id AND is_primary = 1 LIMIT 1) AS image
+                   t.short_description AS attraction_short_description,
+                   (SELECT filename FROM images WHERE attraction_id = a.id AND is_primary = 1 LIMIT 1) AS attraction_image
             FROM route_stops rs
             LEFT JOIN attractions a ON rs.attraction_id = a.id
             LEFT JOIN attraction_translations t ON a.id = t.attraction_id AND t.language_code = :lang
@@ -452,5 +453,5 @@ function getFilteredAttractionsPaginated($category_id = null, $search = '', $lim
     $stmt->execute();
     return $stmt->fetchAll();
 }
-?>
+
 

@@ -28,16 +28,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $duration = $_POST['duration'] ?? '';
     $is_popular = isset($_POST['is_popular']) ? 1 : 0;
 
+    // Обработка загрузки схемы маршрута
+    $map_image = $route['map_image'] ?? null;
+    if (isset($_FILES['map_image']) && $_FILES['map_image']['error'] === UPLOAD_ERR_OK) {
+        $ext = pathinfo($_FILES['map_image']['name'], PATHINFO_EXTENSION);
+        $filename = 'map_' . uniqid() . '.' . $ext;
+        $target_dir = __DIR__ . '/../uploads/routes/';
+        if (!is_dir($target_dir)) {
+            mkdir($target_dir, 0755, true);
+        }
+        $target = $target_dir . $filename;
+        if (move_uploaded_file($_FILES['map_image']['tmp_name'], $target)) {
+            // Удаляем старую картинку, если была
+            if (!empty($route['map_image']) && file_exists($target_dir . $route['map_image'])) {
+                unlink($target_dir . $route['map_image']);
+            }
+            $map_image = $filename;
+        }
+    }
+
     if (empty($slug)) {
         $error = 'Slug обязателен';
     } else {
         try {
             if ($id) {
-                $stmt = $pdo->prepare("UPDATE routes SET slug=?, distance=?, duration=?, is_popular=? WHERE id=?");
-                $stmt->execute([$slug, $distance, $duration, $is_popular, $id]);
+                $stmt = $pdo->prepare("UPDATE routes SET slug=?, distance=?, duration=?, is_popular=?, map_image=? WHERE id=?");
+                $stmt->execute([$slug, $distance, $duration, $is_popular, $map_image, $id]);
             } else {
-                $stmt = $pdo->prepare("INSERT INTO routes (slug, distance, duration, is_popular) VALUES (?, ?, ?, ?)");
-                $stmt->execute([$slug, $distance, $duration, $is_popular]);
+                $stmt = $pdo->prepare("INSERT INTO routes (slug, distance, duration, is_popular, map_image) VALUES (?, ?, ?, ?, ?)");
+                $stmt->execute([$slug, $distance, $duration, $is_popular, $map_image]);
                 $id = $pdo->lastInsertId();
             }
 
@@ -88,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php if (isset($error)): ?>
             <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
         <?php endif; ?>
-        <form method="post">
+        <form method="post" enctype="multipart/form-data">
             <div class="card mb-4">
                 <div class="card-header">Основные параметры</div>
                 <div class="card-body">
@@ -113,6 +132,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <input type="checkbox" name="is_popular" class="form-check-input" id="popularCheck" <?= isset($route['is_popular']) && $route['is_popular'] ? 'checked' : '' ?>>
                                 <label class="form-check-label" for="popularCheck">Популярный маршрут ⭐</label>
                             </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">Схема маршрута (изображение)</label>
+                            <?php if (!empty($route['map_image'])): ?>
+                                <div class="mb-2">
+                                    <img src="<?= BASE_URL ?>uploads/routes/<?= htmlspecialchars($route['map_image']) ?>" style="max-width:200px; border-radius:8px;" alt="Схема">
+                                </div>
+                            <?php endif; ?>
+                            <input type="file" name="map_image" class="form-control" accept="image/*">
+                            <small class="text-muted">Загрузите картинку с планом маршрута. Отображается перед остановками.</small>
                         </div>
                     </div>
                 </div>
@@ -145,7 +176,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <button type="submit" class="btn btn-primary">Сохранить</button>
                 <a href="routes.php" class="btn btn-secondary">Отмена</a>
                 <?php if ($id): ?>
-                    <a href="route_stops.php?id=<?= $id ?>" class="btn btn-info">Управление остановками</a>
+                    <a href="route_stops.php?route_id=<?= $id ?>" class="btn btn-info">Управление остановками</a>
                 <?php endif; ?>
             </div>
         </form>

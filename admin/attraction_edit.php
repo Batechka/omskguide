@@ -21,6 +21,7 @@ if ($id) {
     $images = getImages($id);
 }
 
+// Обработка POST-запроса
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $slug = trim($_POST['slug'] ?? '');
     $category_id = $_POST['category_id'] ?? null;
@@ -29,20 +30,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($category_id === '') {
         $category_id = null;
     }
+
+    // Загрузка аудиофайла
+    $audio_file = $attraction['audio_file'] ?? null;
+    if (isset($_FILES['audio_file']) && $_FILES['audio_file']['error'] === UPLOAD_ERR_OK) {
+        // Удаляем старый файл, если есть
+        if (!empty($audio_file)) {
+            $oldFile = __DIR__ . '/../uploads/audio/' . $audio_file;
+            if (file_exists($oldFile)) unlink($oldFile);
+        }
+        $ext = pathinfo($_FILES['audio_file']['name'], PATHINFO_EXTENSION);
+        $filename = 'audio_' . uniqid() . '.' . $ext;
+        $target = __DIR__ . '/../uploads/audio/' . $filename;
+        if (!is_dir(dirname($target))) {
+            mkdir(dirname($target), 0755, true);
+        }
+        if (move_uploaded_file($_FILES['audio_file']['tmp_name'], $target)) {
+            $audio_file = $filename;
+        }
+    }
+
     if (empty($slug)) {
         $error = 'Slug не может быть пустым';
     } else {
         try {
             if ($id) {
-                $stmt = $pdo->prepare("UPDATE attractions SET slug = ?, category_id = ?, latitude = ?, longitude = ? WHERE id = ?");
-                $stmt->execute([$slug, $category_id, $latitude, $longitude, $id]);
+                $stmt = $pdo->prepare("UPDATE attractions SET slug = ?, category_id = ?, latitude = ?, longitude = ?, audio_file = ? WHERE id = ?");
+                $stmt->execute([$slug, $category_id, $latitude, $longitude, $audio_file, $id]);
             } else {
-                $stmt = $pdo->prepare("INSERT INTO attractions (slug, category_id, latitude, longitude) VALUES (?, ?, ?, ?)");
-                $stmt->execute([$slug, $category_id, $latitude, $longitude]);
+                $stmt = $pdo->prepare("INSERT INTO attractions (slug, category_id, latitude, longitude, audio_file) VALUES (?, ?, ?, ?, ?)");
+                $stmt->execute([$slug, $category_id, $latitude, $longitude, $audio_file]);
                 $id = $pdo->lastInsertId();
             }
 
-            // Разрешённые HTML-теги (добавлены H1, H2, H5, H6)
             $allowed_tags = '<h1><h2><h3><h4><h5><h6><p><br><strong><b><em><i><u><ul><ol><li><blockquote>';
 
             foreach (['ru', 'en'] as $lang_code) {
@@ -59,6 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     full_description = VALUES(full_description)");
                 $stmt->execute([$id, $lang_code, $title, $short, $full]);
             }
+
             require_once '../includes/indexnow.php';
             $pageUrl = BASE_URL . urlencode($slug);
             indexnow_send($pageUrl);
@@ -163,6 +184,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <input type="text" name="slug" class="form-control"
                                value="<?= htmlspecialchars($attraction['slug'] ?? '') ?>" required>
                         <small class="text-muted">Только латинские буквы, цифры и дефис. Например: omskaya-krepost</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Аудиогид (MP3)</label>
+                        <?php if (!empty($attraction['audio_file'])): ?>
+                            <div class="mb-2">
+                                <audio controls style="max-width:100%">
+                                    <source src="<?= BASE_URL ?>uploads/audio/<?= htmlspecialchars($attraction['audio_file']) ?>" type="audio/mpeg">
+                                    Ваш браузер не поддерживает аудио.
+                                </audio>
+                                <br><small>Текущий файл. Загрузите новый, чтобы заменить.</small>
+                            </div>
+                        <?php endif; ?>
+                        <input type="file" name="audio_file" class="form-control" accept=".mp3,audio/mpeg">
+                        <small class="text-muted">Загрузите MP3-файл с записью голоса диктора. Оставьте пустым, если не хотите менять.</small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Категория</label>

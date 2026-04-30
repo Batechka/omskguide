@@ -6,6 +6,7 @@ if (session_status() === PHP_SESSION_NONE) {
 define('BASE_URL', 'http://localhost/omsk/'); // измените на свой домен
 define('UPLOAD_DIR', __DIR__ . '/../uploads/attractions/');
 define('UPLOAD_URL', BASE_URL . 'uploads/attractions/');
+define('ROUTES_UPLOAD_URL', BASE_URL . 'uploads/routes/');
 
 
 $db_host = 'localhost';

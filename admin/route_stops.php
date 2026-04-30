@@ -10,7 +10,6 @@ if (!$route_id) {
     exit;
 }
 
-// Получаем информацию о маршруте
 $stmt = $pdo->prepare("SELECT r.*, rt.title FROM routes r
                        JOIN route_translations rt ON r.id = rt.route_id AND rt.language_code = 'ru'
                        WHERE r.id = ?");
@@ -23,12 +22,19 @@ if (!$route) {
 // Удаление остановки
 if (isset($_GET['delete'])) {
     $stop_id = (int)$_GET['delete'];
+    // Удаляем файл изображения, если он есть
+    $stmt = $pdo->prepare("SELECT image FROM route_stops WHERE id = ?");
+    $stmt->execute([$stop_id]);
+    $img = $stmt->fetchColumn();
+    if ($img && file_exists(UPLOAD_DIR . '../routes/' . $img)) {
+        unlink(UPLOAD_DIR . '../routes/' . $img);
+    }
     $pdo->prepare("DELETE FROM route_stops WHERE id = ? AND route_id = ?")->execute([$stop_id, $route_id]);
     header("Location: route_stops.php?route_id=$route_id");
     exit;
 }
 
-// Перемещение вверх/вниз
+// Перемещение вверх/вниз (без изменений)
 if (isset($_GET['up'])) {
     $stop_id = (int)$_GET['up'];
     $stmt = $pdo->prepare("SELECT stop_order FROM route_stops WHERE id = ?");
@@ -57,39 +63,52 @@ if (isset($_GET['down'])) {
     exit;
 }
 
-// Обработка добавления новой остановки
+// Добавление остановки
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_stop'])) {
-    $stop_type = $_POST['stop_type'] ?? 'existing'; // existing или custom
+    $stop_type = $_POST['stop_type'] ?? 'existing';
     $attraction_id = $_POST['attraction_id'] ?? null;
     $custom_title = trim($_POST['custom_title'] ?? '');
     $custom_description = trim($_POST['custom_description'] ?? '');
     $walk_time = trim($_POST['walk_time'] ?? '');
+    $uploaded_image = null;
 
-    // Валидация
+    // Обработка загрузки изображения
+    if (isset($_FILES['stop_image']) && $_FILES['stop_image']['error'] === UPLOAD_ERR_OK) {
+        $ext = pathinfo($_FILES['stop_image']['name'], PATHINFO_EXTENSION);
+        $filename = uniqid() . '.' . $ext;
+        $target_dir = UPLOAD_DIR . '../routes/';
+        if (!is_dir($target_dir)) {
+            mkdir($target_dir, 0755, true);
+        }
+        $target = $target_dir . $filename;
+        if (move_uploaded_file($_FILES['stop_image']['tmp_name'], $target)) {
+            $uploaded_image = $filename;
+        }
+    }
+
     if ($stop_type === 'existing' && empty($attraction_id)) {
         $error = 'Выберите достопримечательность из списка';
     } elseif ($stop_type === 'custom' && empty($custom_title)) {
         $error = 'Укажите название своей точки';
     } else {
-        // Определяем, какие данные сохранять
         $save_attraction_id = ($stop_type === 'existing') ? $attraction_id : null;
         $save_custom_title = ($stop_type === 'custom') ? $custom_title : null;
         $save_custom_description = ($stop_type === 'custom') ? $custom_description : null;
 
-        // Получаем следующий порядковый номер
         $stmt = $pdo->prepare("SELECT MAX(stop_order) FROM route_stops WHERE route_id = ?");
         $stmt->execute([$route_id]);
         $nextOrder = $stmt->fetchColumn() + 1;
 
-        $stmt = $pdo->prepare("INSERT INTO route_stops (route_id, stop_order, attraction_id, custom_title, custom_description, walk_time_to_next)
-                               VALUES (?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$route_id, $nextOrder, $save_attraction_id, $save_custom_title, $save_custom_description, $walk_time ?: null]);
+        $stmt = $pdo->prepare("INSERT INTO route_stops
+            (route_id, stop_order, attraction_id, custom_title, custom_description, walk_time_to_next, image)
+            VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$route_id, $nextOrder, $save_attraction_id, $save_custom_title, $save_custom_description, $walk_time, $uploaded_image]);
         header("Location: route_stops.php?route_id=$route_id");
         exit;
     }
 }
 
-// Получаем все остановки маршрута с корректными названиями достопримечательностей
+// Получение остановок
 $stops = $pdo->prepare("
     SELECT rs.*,
            COALESCE(t.title, rs.custom_title) AS display_title,
@@ -103,7 +122,6 @@ $stops = $pdo->prepare("
 $stops->execute([$route_id]);
 $stops = $stops->fetchAll();
 
-// Список достопримечательностей для выпадающего списка
 $attractions = $pdo->query("
     SELECT a.id, t.title
     FROM attractions a
@@ -120,6 +138,7 @@ $attractions = $pdo->query("
     <style>
         #custom-fields { display: none; }
         #existing-fields { display: block; }
+        .image-thumb { max-width: 80px; max-height: 60px; border-radius: 6px; }
     </style>
 </head>
 <body>
@@ -141,15 +160,14 @@ $attractions = $pdo->query("
         <div class="card mb-4">
             <div class="card-header">Добавить остановку</div>
             <div class="card-body">
-                <form method="post" id="addStopForm">
+                <form method="post" enctype="multipart/form-data">
                     <div class="mb-3">
                         <label class="form-label">Тип точки</label>
                         <select name="stop_type" id="stopType" class="form-select">
                             <option value="existing" selected>Существующая достопримечательность</option>
-                            <option value="custom">Своя точка (название, описание)</option>
+                            <option value="custom">Своя точка</option>
                         </select>
                     </div>
-
                     <div id="existing-fields">
                         <div class="mb-3">
                             <label class="form-label">Выберите достопримечательность</label>
@@ -161,18 +179,20 @@ $attractions = $pdo->query("
                             </select>
                         </div>
                     </div>
-
                     <div id="custom-fields">
                         <div class="mb-3">
                             <label class="form-label">Название точки</label>
-                            <input type="text" name="custom_title" class="form-control" placeholder="Например: Смотровая площадка">
+                            <input type="text" name="custom_title" class="form-control">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Описание (необязательно)</label>
-                            <textarea name="custom_description" class="form-control" rows="2" placeholder="Краткое описание места"></textarea>
+                            <label class="form-label">Описание</label>
+                            <textarea name="custom_description" class="form-control" rows="2"></textarea>
                         </div>
                     </div>
-
+                    <div class="mb-3">
+                        <label class="form-label">Изображение (для своей точки)</label>
+                        <input type="file" name="stop_image" class="form-control" accept="image/*">
+                    </div>
                     <div class="mb-3">
                         <label class="form-label">Время до следующей точки</label>
                         <input type="text" name="walk_time" class="form-control" placeholder="например: 10 мин">
@@ -186,19 +206,27 @@ $attractions = $pdo->query("
         <?php if (empty($stops)): ?>
             <p>Нет остановок. Добавьте первую.</p>
         <?php else: ?>
-            <table class="table table-bordered">
+            <table class="table table-bordered align-middle">
                 <thead>
                     <tr>
                         <th>№</th>
+                        <th>Изображение</th>
                         <th>Название</th>
                         <th>Время до след.</th>
-                        <th style="width:120px">Действия</th>
+                        <th>Действия</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($stops as $index => $stop): ?>
+                    <?php foreach ($stops as $stop): ?>
                         <tr>
                             <td><?= $stop['stop_order'] ?></td>
+                            <td>
+                                <?php if ($stop['image']): ?>
+                                    <img src="<?= BASE_URL ?>uploads/routes/<?= htmlspecialchars($stop['image']) ?>" class="image-thumb" alt="">
+                                <?php else: ?>
+                                    —
+                                <?php endif; ?>
+                            </td>
                             <td>
                                 <?= htmlspecialchars($stop['display_title']) ?>
                                 <?php if ($stop['attraction_id']): ?>
@@ -209,8 +237,8 @@ $attractions = $pdo->query("
                             </td>
                             <td><?= htmlspecialchars($stop['walk_time_to_next'] ?? '—') ?></td>
                             <td>
-                                <a href="?route_id=<?= $route_id ?>&up=<?= $stop['id'] ?>" class="btn btn-sm btn-outline-secondary" title="Вверх">↑</a>
-                                <a href="?route_id=<?= $route_id ?>&down=<?= $stop['id'] ?>" class="btn btn-sm btn-outline-secondary" title="Вниз">↓</a>
+                                <a href="?route_id=<?= $route_id ?>&up=<?= $stop['id'] ?>" class="btn btn-sm btn-outline-secondary">↑</a>
+                                <a href="?route_id=<?= $route_id ?>&down=<?= $stop['id'] ?>" class="btn btn-sm btn-outline-secondary">↓</a>
                                 <a href="?route_id=<?= $route_id ?>&delete=<?= $stop['id'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('Удалить остановку?')">×</a>
                             </td>
                         </tr>
@@ -221,28 +249,20 @@ $attractions = $pdo->query("
     </div>
 
     <script>
-        // Переключение видимости полей в зависимости от выбранного типа точки
         const stopType = document.getElementById('stopType');
         const existingFields = document.getElementById('existing-fields');
         const customFields = document.getElementById('custom-fields');
-
         function toggleFields() {
             if (stopType.value === 'existing') {
                 existingFields.style.display = 'block';
                 customFields.style.display = 'none';
-                // Устанавливаем required для поля выбора достопримечательности
-                document.querySelector('[name="attraction_id"]').required = true;
-                document.querySelector('[name="custom_title"]').required = false;
             } else {
                 existingFields.style.display = 'none';
                 customFields.style.display = 'block';
-                document.querySelector('[name="attraction_id"]').required = false;
-                document.querySelector('[name="custom_title"]').required = true;
             }
         }
-
         stopType.addEventListener('change', toggleFields);
-        toggleFields(); // начальное состояние
+        toggleFields();
     </script>
 </body>
 </html>
