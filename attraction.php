@@ -1,7 +1,9 @@
 <?php
 require_once 'includes/config.php';
 require_once 'includes/functions.php';
-
+if (!isset($slug)) {
+    $slug = $_GET['slug'] ?? ''; // или редирект, если нужно
+}
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }

@@ -8,11 +8,13 @@ $attractions = getAllAttractionsAdmin();
 ?>
 <!DOCTYPE html>
 <html lang="<?= $lang ?>">
+
 <head>
     <meta charset="UTF-8">
     <title><?= __('admin_panel') ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
+
 <body>
     <nav class="navbar navbar-dark bg-dark">
         <div class="container">
@@ -20,10 +22,11 @@ $attractions = getAllAttractionsAdmin();
             <div>
                 <a href="../index.php" class="btn btn-outline-light btn-sm"><?= __('home') ?></a>
                 <a href="logout.php" class="btn btn-outline-light btn-sm"><?= __('logout') ?></a>
-                <a href="categories.php" class="btn btn-outline-light btn-sm"><?=__('categories') ?></a>
-                <a href="route_edit.php"  class="btn btn-outline-light btn-sm">редактироваие маршрута</a>
-                <a href="route_stops.php"  class="btn btn-outline-light btn-sm">редактироваие маршрута точки</a>
-                <a href="routes.php"  class="btn btn-outline-light btn-sm">список маршрутов</a>
+                <a href="categories.php" class="btn btn-outline-light btn-sm"><?= __('categories') ?></a>
+                <a href="route_edit.php" class="btn btn-outline-light btn-sm">редактироваие маршрута</a>
+                <a href="route_stops.php" class="btn btn-outline-light btn-sm">редактироваие маршрута точки</a>
+                <a href="routes.php" class="btn btn-outline-light btn-sm">список маршрутов</a>
+                <a href="articles.php" class="btn btn-outline-light btn-sm">статьи</a>
             </div>
         </div>
     </nav>
@@ -44,21 +47,22 @@ $attractions = getAllAttractionsAdmin();
             </thead>
             <tbody>
                 <?php foreach ($attractions as $a): ?>
-                <tr>
-                    <td><?= $a['id'] ?></td>
-                    <td><?= htmlspecialchars($a['slug']) ?></td>
-                    <td><?= htmlspecialchars($a['title_ru'] ?? '') ?></td>
-                    <td><?= htmlspecialchars($a['title_en'] ?? '') ?></td>
-                    <td>
-                        <a href="attraction_edit.php?id=<?= $a['id'] ?>" class="btn btn-sm btn-primary"><?= __('edit') ?></a>
-                        <a href="?delete=<?= $a['id'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('<?= __('confirm_delete') ?>')"><?= __('delete') ?></a>
-                    </td>
-                </tr>
+                    <tr>
+                        <td><?= $a['id'] ?></td>
+                        <td><?= htmlspecialchars($a['slug']) ?></td>
+                        <td><?= htmlspecialchars($a['title_ru'] ?? '') ?></td>
+                        <td><?= htmlspecialchars($a['title_en'] ?? '') ?></td>
+                        <td>
+                            <a href="attraction_edit.php?id=<?= $a['id'] ?>" class="btn btn-sm btn-primary"><?= __('edit') ?></a>
+                            <a href="?delete=<?= $a['id'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('<?= __('confirm_delete') ?>')"><?= __('delete') ?></a>
+                        </td>
+                    </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
     </div>
 </body>
+
 </html>
 <?php
 // Обработка удаления

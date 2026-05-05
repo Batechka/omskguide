@@ -4,30 +4,75 @@ session_start();
 require_once 'includes/config.php';
 require_once 'includes/functions.php';
 
-/*
-|--------------------------------------------------------------------------
-| Язык сайта
-|--------------------------------------------------------------------------
-*/
-if (isset($_GET['lang']) && in_array($_GET['lang'], ['ru', 'en'])) {
-    $_SESSION['lang'] = $_GET['lang'];
-    $params = $_GET;
-    unset($params['lang']);
-    $redirectUrl = strtok($_SERVER["REQUEST_URI"], '?');
-    if (!empty($params)) {
-        $redirectUrl .= '?' . http_build_query($params);
-    }
-    header("Location: $redirectUrl");
+// =====================================================
+// КРИТИЧЕСКАЯ ОЧИСТКА ГРЯЗНЫХ URL (ПЕРВЫЙ ПРИОРИТЕТ)
+// =====================================================
+
+// Если есть route=index.php в любом виде — РЕДИРЕКТ на чистую главную
+// if (isset($_GET['route']) && strpos($_GET['route'], 'index.php') !== false) {
+//     $lang = $_GET['lang'] ?? 'ru';
+//     header("Location: /{$lang}/", true, 301);
+//     exit;
+// }
+
+
+
+
+// =====================================================
+// ЧИСТЫЙ ROUTE ИЗ PATH (игнорируем GET параметры)
+// =====================================================
+$request = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
+
+// Извлекаем язык из пути /ru/ или /en/
+if (preg_match('#^([a-z]{2})/#', $request, $matches)) {
+    $lang = $matches[1];
+    $request = substr($request, strlen($matches[0])); // убираем /ru/
+} else {
+    $lang = $_GET['lang'] ?? 'ru';
+}
+
+$request = trim($request, '/');
+
+// Полностью удаляем index.php из маршрута
+$request = preg_replace('#index\.php#i', '', $request);
+$request = trim($request, '/');
+
+// Если пустой — главная
+if (empty($request)) {
+    $request = '';
+}
+
+if (!in_array($lang, ['ru', 'en'])) {
+    $lang = 'ru';
+}
+
+$_SESSION['lang'] = $lang;
+
+// Дополнительная защита (на всякий случай)
+if ($request === 'index.php') {
+    header("Location: /{$lang}/", true, 301);
     exit;
 }
-$lang = $_SESSION['lang'] ?? 'ru';
-
 /*
 |--------------------------------------------------------------------------
 | Определяем текущий запрос
 |--------------------------------------------------------------------------
 */
-$request = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
+
+
+
+/*
+|--------------------------------------------------------------------------
+| ROUTE (ПРАВИЛЬНО)
+|--------------------------------------------------------------------------
+*/
+
+$request = trim($_GET['route'] ?? '', '/');
+
+// защита от index.php
+if ($request === 'index.php') {
+    $request = '';
+}
 
 // Убираем подпапку, если сайт в ней (например, /omsk/)
 $basePath = trim(parse_url(BASE_URL, PHP_URL_PATH), '/');
@@ -41,6 +86,29 @@ if ($request === 'index.php') {
     $request = '';
 }
 
+
+if ($request === 'articles' || strpos($request, 'article/') === 0) {
+    if ($request === 'articles') {
+        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        $limit = 6;
+        $offset = ($page - 1) * $limit;
+        $articles = getArticles($limit, $offset);
+        $totalArticles = getTotalArticles();
+        $hasMore = ($offset + $limit) < $totalArticles;
+
+        $pageTitle = $lang == 'ru' ? 'Статьи — Омскъ Исторический' : 'Articles — Historical Omsk';
+        $pageDescription = $lang == 'ru' ? 'Читайте наши статьи о достопримечательностях Омска' : 'Read our articles about Omsk landmarks';
+        require_once 'articles.php';
+        exit;
+    } elseif (strpos($request, 'article/') === 0) {
+        $articleSlug = substr($request, 8);
+        $article = getArticleBySlug($articleSlug);
+        if ($article) {
+            require_once 'article-detail.php';
+            exit;
+        }
+    }
+}
 /*
 |--------------------------------------------------------------------------
 | Проверка маршрутов
@@ -90,21 +158,22 @@ if ($request === '' || $request === 'index.php') {
     // --- КОНЕЦ ПАГИНАЦИИ ---
 
     $pageTitle = $lang == 'ru'
-    ? 'Достопримечательности Омска: куда сходить, что посмотреть, фото и описания — Омскъ Исторический'
-    : 'Omsk Landmarks: What to See, Photos, Descriptions, Map — Historical Omsk';
+        ? 'Достопримечательности Омска: куда сходить, что посмотреть, фото и описания — Омскъ Исторический'
+        : 'Omsk Landmarks: What to See, Photos, Descriptions, Map — Historical Omsk';
     $pageDescription = $lang === 'ru'
-    ? 'Достопримечательности Омска: куда сходить, что посмотреть, где погулять. Полный путеводитель по Омску с фото, описаниями, маршрутами и советами.'
-    : 'Omsk landmarks: what to see, where to walk, photos, descriptions, routes and tips.';
+        ? 'Достопримечательности Омска: куда сходить, что посмотреть, где погулять. Полный путеводитель по Омску с фото, описаниями, маршрутами и советами.'
+        : 'Omsk landmarks: what to see, where to walk, photos, descriptions, routes and tips.';
     $ogImage = BASE_URL . 'uploads/hero-bg.jpg';
-    $canonicalUrl = strtok(BASE_URL . $_SERVER['REQUEST_URI'], '?');
+    $canonicalUrl = BASE_URL . trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
 
 
 
 ?>
 
 
-<!DOCTYPE html>
-<html lang="<?= htmlspecialchars($lang) ?>">
+    <!DOCTYPE html>
+    <html lang="<?= htmlspecialchars($lang) ?>">
+
     <head>
 
         <meta charset="UTF-8">
@@ -122,13 +191,13 @@ if ($request === '' || $request === 'index.php') {
 
         <link rel="canonical" href="<?= $canonicalUrl ?>">
 
-        <link rel="alternate" hreflang="ru" href="<?= BASE_URL ?>?lang=ru">
-        <link rel="alternate" hreflang="en" href="<?= BASE_URL ?>?lang=en">
-        <link rel="alternate" hreflang="x-default" href="<?= BASE_URL ?>">
+        <link rel="alternate" hreflang="ru" href="<?= BASE_URL ?>ru/">
+        <link rel="alternate" hreflang="en" href="<?= BASE_URL ?>en/">
+        <link rel="alternate" hreflang="x-default" href="<?= BASE_URL ?>ru/">
 
         <link rel="stylesheet" href="<?= BASE_URL ?>css/style.css">
         <link rel="stylesheet" href="<?= BASE_URL ?>css/faq.css">
-        <link rel="stylesheet" href="css/card.css">
+        <link rel="stylesheet" href="<?= BASE_URL ?>css/card.css">
 
         <?php include 'includes/metrica.php'; ?>
 
@@ -137,8 +206,8 @@ if ($request === '' || $request === 'index.php') {
 
     <body>
         <?php
-            $slugForLang = '';
-            include 'components/header.php';
+        $slugForLang = '';
+        include 'components/header.php';
         ?>
 
         <!-- HERO БАННЕР -->
@@ -156,15 +225,15 @@ if ($request === '' || $request === 'index.php') {
 
 
         <?php
-            $popularRoutes = $pdo->query("
+        $popularRoutes = $pdo->query("
                 SELECT r.slug, rt.title, rt.short_description, r.distance, r.duration, r.stops_count
                 FROM routes r
                 JOIN route_translations rt ON r.id = rt.route_id AND rt.language_code = '{$lang}'
                 WHERE r.is_popular = 1
                 LIMIT 3
             ")->fetchAll();
-            if (!empty($popularRoutes)):
-            ?>
+        if (!empty($popularRoutes)):
+        ?>
             <section class="popular-routes container">
                 <h2><?= $lang == 'ru' ? 'Популярные маршруты' : 'Popular Routes' ?></h2>
                 <div class="routes-grid">
@@ -187,7 +256,7 @@ if ($request === '' || $request === 'index.php') {
                 </div>
                 <a href="<?= BASE_URL ?>kuda-shodit-v-omske" class="btn btn-outline"><?= $lang == 'ru' ? 'Все маршруты' : 'All routes' ?></a>
             </section>
-            <?php endif; ?>
+        <?php endif; ?>
 
         <main class="container" id="explore">
             <h2 class="main-title"><?= __('attractions') ?> Омска</h2>
@@ -195,17 +264,17 @@ if ($request === '' || $request === 'index.php') {
             <!-- Поиск -->
             <div class="search-wrapper">
                 <input type="text" id="searchInput" class="search-input"
-                       placeholder="<?= $lang=='ru' ? 'Поиск...' : 'Search...' ?>"
-                       value="<?= htmlspecialchars($search_query) ?>">
+                    placeholder="<?= $lang == 'ru' ? 'Поиск...' : 'Search...' ?>"
+                    value="<?= htmlspecialchars($search_query) ?>">
                 <div id="searchSuggestions" class="search-suggestions"></div>
             </div>
 
             <!-- Категории -->
             <div class="category-filter" id="categoryFilter">
-                <a href="#" class="category-link <?= !$selected_category ? 'active' : '' ?>" data-category=""><?= $lang=='ru' ? 'Все' : 'All' ?></a>
-                <?php foreach($categories as $cat): ?>
-                    <a href="#" class="category-link <?= $selected_category==$cat['id'] ? 'active' : '' ?>"
-                    data-category="<?= $cat['id'] ?>" style="border-left: 6px solid <?= htmlspecialchars($cat['color']) ?>;">
+                <a href="#" class="category-link <?= !$selected_category ? 'active' : '' ?>" data-category=""><?= $lang == 'ru' ? 'Все' : 'All' ?></a>
+                <?php foreach ($categories as $cat): ?>
+                    <a href="#" class="category-link <?= $selected_category == $cat['id'] ? 'active' : '' ?>"
+                        data-category="<?= $cat['id'] ?>" style="border-left: 6px solid <?= htmlspecialchars($cat['color']) ?>;">
                         <?= htmlspecialchars($cat['name']) ?>
                     </a>
                 <?php endforeach; ?>
@@ -217,7 +286,7 @@ if ($request === '' || $request === 'index.php') {
                     <article class="attraction-card animate-on-scroll">
                         <?php if (!empty($item['primary_image'])): ?>
                             <img src="<?= UPLOAD_URL . htmlspecialchars($item['primary_image']) ?>"
-     class="card-img" alt="<?= htmlspecialchars($item['title']) ?> — достопримечательность Омска" loading="lazy">
+                                class="card-img" alt="<?= htmlspecialchars($item['title']) ?> — достопримечательность Омска" loading="lazy">
                         <?php else: ?>
                             <div class="card-img placeholder-img"></div>
                         <?php endif; ?>
@@ -232,15 +301,45 @@ if ($request === '' || $request === 'index.php') {
                 <?php endforeach; ?>
 
             </div>
-                <?php if (count($attractions) == $limit && ($offset + $limit) < $totalAttractions): ?>
-                    <div class="load-more-container">
-                        <button id="loadMoreBtn" class="btn btn-outline load-more-btn" data-page="<?= $page + 1 ?>">
-                            <?= $lang == 'ru' ? 'Показать ещё' : 'Load more' ?>
-                        </button>
-                    </div>
-                <?php endif; ?>
+            <?php if (count($attractions) == $limit && ($offset + $limit) < $totalAttractions): ?>
+                <div class="load-more-container">
+                    <button id="loadMoreBtn" class="btn btn-outline load-more-btn" data-page="<?= $page + 1 ?>">
+                        <?= $lang == 'ru' ? 'Показать ещё' : 'Load more' ?>
+                    </button>
+                </div>
+            <?php endif; ?>
         </main>
-
+        <?php
+        $homeArticles = getArticles(3, 0);
+        if (!empty($homeArticles)):
+        ?>
+            <section class="home-articles container">
+                <h2><?= $lang == 'ru' ? 'Статьи и новости' : 'Articles & News' ?></h2>
+                <div class="articles-grid">
+                    <?php foreach ($homeArticles as $article): ?>
+                        <article class="article-card">
+                            <?php if ($article['image']): ?>
+                                <img src="<?= BASE_URL ?>uploads/articles/<?= htmlspecialchars($article['image']) ?>"
+                                    alt="<?= htmlspecialchars($article['title']) ?>"
+                                    class="article-card-img" loading="lazy">
+                            <?php endif; ?>
+                            <div class="article-card-content">
+                                <h3><?= htmlspecialchars($article['title']) ?></h3>
+                                <p><?= htmlspecialchars($article['short_description']) ?></p>
+                                <a href="<?= BASE_URL ?>article/<?= urlencode($article['slug']) ?>" class="btn">
+                                    <?= $lang == 'ru' ? 'Читать' : 'Read' ?>
+                                </a>
+                            </div>
+                        </article>
+                    <?php endforeach; ?>
+                </div>
+                <div class="load-more-container">
+                    <a href="<?= BASE_URL ?>articles" class="btn btn-outline">
+                        <?= $lang == 'ru' ? 'Больше статей' : 'More articles' ?>
+                    </a>
+                </div>
+            </section>
+        <?php endif; ?>
         <!-- faq -->
         <?php include 'components/faq.php'; ?>
 
@@ -315,6 +414,7 @@ if ($request === '' || $request === 'index.php') {
 
                 const html = document.documentElement;
                 let fontSizeLevel = parseInt(localStorage.getItem('fontSizeLevel')) || 0;
+
                 function applyFontSize() {
                     html.classList.remove('font-size-large', 'font-size-extra-large');
                     if (fontSizeLevel === 1) html.classList.add('font-size-large');
@@ -339,7 +439,9 @@ if ($request === '' || $request === 'index.php') {
                             entry.target.classList.add('visible');
                         }
                     });
-                }, { threshold: 0.1 });
+                }, {
+                    threshold: 0.1
+                });
                 document.querySelectorAll('.animate-on-scroll').forEach(el => observer.observe(el));
             })();
         </script>
@@ -379,7 +481,9 @@ if ($request === '' || $request === 'index.php') {
                                             entry.target.classList.add('visible');
                                         }
                                     });
-                                }, { threshold: 0.1 });
+                                }, {
+                                    threshold: 0.1
+                                });
 
                                 document.querySelectorAll('.attraction-card:not(.visible)').forEach(card => {
                                     observer.observe(card);
@@ -397,52 +501,55 @@ if ($request === '' || $request === 'index.php') {
                         });
                 });
             }
-            </script>
+        </script>
     </body>
     <script>
-    // AJAX-фильтрация по категориям
-    document.querySelectorAll('.category-link').forEach(link => {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-            const categoryId = this.dataset.category;
+        // AJAX-фильтрация по категориям
+        document.querySelectorAll('.category-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const categoryId = this.dataset.category;
 
-            // Обновляем активный класс
-            document.querySelectorAll('.category-link').forEach(l => l.classList.remove('active'));
-            this.classList.add('active');
+                // Обновляем активный класс
+                document.querySelectorAll('.category-link').forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
 
-            // Обновляем URL без перезагрузки
-            const url = new URL(window.location);
-            if (categoryId) {
-                url.searchParams.set('category', categoryId);
-            } else {
-                url.searchParams.delete('category');
-            }
-            history.pushState({}, '', url);
+                // Обновляем URL без перезагрузки
+                const url = new URL(window.location);
+                if (categoryId) {
+                    url.searchParams.set('category', categoryId);
+                } else {
+                    url.searchParams.delete('category');
+                }
+                history.pushState({}, '', url);
 
-            // Сбрасываем пагинацию (скрываем кнопку "Показать ещё", обнуляем текущую страницу)
-            const loadMoreBtn = document.getElementById('loadMoreBtn');
-            if (loadMoreBtn) loadMoreBtn.style.display = 'none';
-            currentPage = 2;
+                // Сбрасываем пагинацию (скрываем кнопку "Показать ещё", обнуляем текущую страницу)
+                const loadMoreBtn = document.getElementById('loadMoreBtn');
+                if (loadMoreBtn) loadMoreBtn.style.display = 'none';
+                currentPage = 2;
 
-            // AJAX-запрос
-            fetch(`ajax_filter_attractions.php?category=${categoryId}&lang=<?= $lang ?>`)
-                .then(r => r.json())
-                .then(data => {
-                    document.querySelector('.attractions-grid').innerHTML = data.html;
-                    // Обновляем анимации
-                    const observer = new IntersectionObserver((entries) => {
-                        entries.forEach(entry => {
-                            if (entry.isIntersecting) entry.target.classList.add('visible');
+                // AJAX-запрос
+                fetch(`ajax_filter_attractions.php?category=${categoryId}&lang=<?= $lang ?>`)
+                    .then(r => r.json())
+                    .then(data => {
+                        document.querySelector('.attractions-grid').innerHTML = data.html;
+                        // Обновляем анимации
+                        const observer = new IntersectionObserver((entries) => {
+                            entries.forEach(entry => {
+                                if (entry.isIntersecting) entry.target.classList.add('visible');
+                            });
+                        }, {
+                            threshold: 0.1
                         });
-                    }, { threshold: 0.1 });
-                    document.querySelectorAll('.attraction-card').forEach(card => observer.observe(card));
-                });
+                        document.querySelectorAll('.attraction-card').forEach(card => observer.observe(card));
+                    });
+            });
         });
-    });
     </script>
+
     </html>
 <?php
-exit;
+    exit;
 }
 
 /*
@@ -482,17 +589,20 @@ http_response_code(404);
 ?>
 <!DOCTYPE html>
 <html lang="<?= htmlspecialchars($lang) ?>">
+
 <head>
-<meta charset="UTF-8">
-<title>404 — Страница не найдена</title>
-<link rel="stylesheet" href="<?= BASE_URL ?>css/style.css">
+    <meta charset="UTF-8">
+    <title>404 — Страница не найдена</title>
+    <link rel="stylesheet" href="<?= BASE_URL ?>css/style.css">
 </head>
+
 <body>
 
-<div class="container" style="padding:4rem 0;text-align:center;">
-<h1>Страница не найдена</h1>
-<a href="<?= BASE_URL ?>" class="btn">На главную</a>
-</div>
+    <div class="container" style="padding:4rem 0;text-align:center;">
+        <h1>Страница не найдена</h1>
+        <a href="<?= BASE_URL ?>" class="btn">На главную</a>
+    </div>
 
 </body>
+
 </html>

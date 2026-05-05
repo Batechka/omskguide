@@ -1,7 +1,8 @@
 <?php
 require_once __DIR__ . '/config.php';
 
-function getAttractions($lang = null) {
+function getAttractions($lang = null)
+{
     global $pdo;
     if (!$lang) $lang = $_SESSION['lang'];
 
@@ -15,7 +16,8 @@ function getAttractions($lang = null) {
     return $stmt->fetchAll();
 }
 
-function getAttractionBySlug($slug, $lang = null) {
+function getAttractionBySlug($slug, $lang = null)
+{
     global $pdo;
     if (!$lang) $lang = $_SESSION['lang'] ?? 'ru';
 
@@ -29,14 +31,16 @@ function getAttractionBySlug($slug, $lang = null) {
     $stmt->execute(['slug' => $slug, 'lang' => $lang]);
     return $stmt->fetch();
 }
-function getImages($attraction_id) {
+function getImages($attraction_id)
+{
     global $pdo;
     $stmt = $pdo->prepare("SELECT * FROM images WHERE attraction_id = ? ORDER BY sort_order, id");
     $stmt->execute([$attraction_id]);
     return $stmt->fetchAll();
 }
 
-function getAllAttractionsAdmin() {
+function getAllAttractionsAdmin()
+{
     global $pdo;
     $sql = "SELECT a.id, a.slug,
                    MAX(CASE WHEN t.language_code = 'ru' THEN t.title END) as title_ru,
@@ -48,7 +52,8 @@ function getAllAttractionsAdmin() {
     return $pdo->query($sql)->fetchAll();
 }
 
-function getAttractionTranslations($attraction_id) {
+function getAttractionTranslations($attraction_id)
+{
     global $pdo;
     $stmt = $pdo->prepare("SELECT language_code, title, short_description, full_description
                            FROM attraction_translations WHERE attraction_id = ?");
@@ -66,7 +71,8 @@ function getAttractionTranslations($attraction_id) {
 /**
  * Получить похожие достопримечательности (случайные, исключая текущую)
  */
-function getRelatedAttractions($currentId, $limit = 3, $lang = null) {
+function getRelatedAttractions($currentId, $limit = 3, $lang = null)
+{
     global $pdo;
     if (!$lang) $lang = $_SESSION['lang'] ?? 'ru';
 
@@ -88,7 +94,8 @@ function getRelatedAttractions($currentId, $limit = 3, $lang = null) {
 /**
  * Форматирование даты с учётом языка
  */
-function formatDate($date, $lang) {
+function formatDate($date, $lang)
+{
     $timestamp = strtotime($date);
     if ($lang == 'ru') {
         return date('d.m.Y', $timestamp);
@@ -100,7 +107,8 @@ function formatDate($date, $lang) {
 /**
  * Генерация оглавления из HTML-контента с заголовками H3
  */
-function generateTOC($html) {
+function generateTOC($html)
+{
     if (empty($html)) return [];
 
     $toc = [];
@@ -119,11 +127,12 @@ function generateTOC($html) {
 /**
  * Добавление якорей к заголовкам H3 в HTML-контенте
  */
-function addAnchorsToHeadings($html) {
+function addAnchorsToHeadings($html)
+{
     if (empty($html)) return $html;
 
     $index = 1;
-    return preg_replace_callback('/<h([1-6])>(.*?)<\/h\1>/i', function($matches) use (&$index) {
+    return preg_replace_callback('/<h([1-6])>(.*?)<\/h\1>/i', function ($matches) use (&$index) {
         $level = $matches[1];
         $title = strip_tags($matches[2]);
         $id = 'section-' . $index . '-' . preg_replace('/[^a-z0-9]+/', '-', strtolower(transliterate($title)));
@@ -135,17 +144,74 @@ function addAnchorsToHeadings($html) {
 /**
  * Транслитерация русского текста в латиницу для ID
  */
-function transliterate($text) {
+function transliterate($text)
+{
     $translit = [
-        'а' => 'a', 'б' => 'b', 'в' => 'v', 'г' => 'g', 'д' => 'd', 'е' => 'e', 'ё' => 'yo', 'ж' => 'zh',
-        'з' => 'z', 'и' => 'i', 'й' => 'y', 'к' => 'k', 'л' => 'l', 'м' => 'm', 'н' => 'n', 'о' => 'o',
-        'п' => 'p', 'р' => 'r', 'с' => 's', 'т' => 't', 'у' => 'u', 'ф' => 'f', 'х' => 'h', 'ц' => 'c',
-        'ч' => 'ch', 'ш' => 'sh', 'щ' => 'sch', 'ъ' => '', 'ы' => 'y', 'ь' => '', 'э' => 'e', 'ю' => 'yu',
+        'а' => 'a',
+        'б' => 'b',
+        'в' => 'v',
+        'г' => 'g',
+        'д' => 'd',
+        'е' => 'e',
+        'ё' => 'yo',
+        'ж' => 'zh',
+        'з' => 'z',
+        'и' => 'i',
+        'й' => 'y',
+        'к' => 'k',
+        'л' => 'l',
+        'м' => 'm',
+        'н' => 'n',
+        'о' => 'o',
+        'п' => 'p',
+        'р' => 'r',
+        'с' => 's',
+        'т' => 't',
+        'у' => 'u',
+        'ф' => 'f',
+        'х' => 'h',
+        'ц' => 'c',
+        'ч' => 'ch',
+        'ш' => 'sh',
+        'щ' => 'sch',
+        'ъ' => '',
+        'ы' => 'y',
+        'ь' => '',
+        'э' => 'e',
+        'ю' => 'yu',
         'я' => 'ya',
-        'А' => 'A', 'Б' => 'B', 'В' => 'V', 'Г' => 'G', 'Д' => 'D', 'Е' => 'E', 'Ё' => 'Yo', 'Ж' => 'Zh',
-        'З' => 'Z', 'И' => 'I', 'Й' => 'Y', 'К' => 'K', 'Л' => 'L', 'М' => 'M', 'Н' => 'N', 'О' => 'O',
-        'П' => 'P', 'Р' => 'R', 'С' => 'S', 'Т' => 'T', 'У' => 'U', 'Ф' => 'F', 'Х' => 'H', 'Ц' => 'C',
-        'Ч' => 'Ch', 'Ш' => 'Sh', 'Щ' => 'Sch', 'Ъ' => '', 'Ы' => 'Y', 'Ь' => '', 'Э' => 'E', 'Ю' => 'Yu',
+        'А' => 'A',
+        'Б' => 'B',
+        'В' => 'V',
+        'Г' => 'G',
+        'Д' => 'D',
+        'Е' => 'E',
+        'Ё' => 'Yo',
+        'Ж' => 'Zh',
+        'З' => 'Z',
+        'И' => 'I',
+        'Й' => 'Y',
+        'К' => 'K',
+        'Л' => 'L',
+        'М' => 'M',
+        'Н' => 'N',
+        'О' => 'O',
+        'П' => 'P',
+        'Р' => 'R',
+        'С' => 'S',
+        'Т' => 'T',
+        'У' => 'U',
+        'Ф' => 'F',
+        'Х' => 'H',
+        'Ц' => 'C',
+        'Ч' => 'Ch',
+        'Ш' => 'Sh',
+        'Щ' => 'Sch',
+        'Ъ' => '',
+        'Ы' => 'Y',
+        'Ь' => '',
+        'Э' => 'E',
+        'Ю' => 'Yu',
         'Я' => 'Ya'
     ];
     return strtr($text, $translit);
@@ -154,7 +220,8 @@ function transliterate($text) {
 /**
  * Получить все категории на нужном языке
  */
-function getCategories($lang = null) {
+function getCategories($lang = null)
+{
     global $pdo;
     if (!$lang) $lang = $_SESSION['lang'] ?? 'ru';
     $sql = "SELECT c.id, c.slug, c.color, ct.name
@@ -169,7 +236,8 @@ function getCategories($lang = null) {
 /**
  * Получить достопримечательности с фильтром по категории и поиском
  */
-function getFilteredAttractions($category_id = null, $search = '', $lang = null) {
+function getFilteredAttractions($category_id = null, $search = '', $lang = null)
+{
     global $pdo;
     if (!$lang) $lang = $_SESSION['lang'] ?? 'ru';
 
@@ -197,7 +265,8 @@ function getFilteredAttractions($category_id = null, $search = '', $lang = null)
 /**
  * Поиск с автодополнением
  */
-function searchSuggestions($query, $lang = 'ru') {
+function searchSuggestions($query, $lang = 'ru')
+{
     global $pdo;
     $sql = "SELECT a.id, a.slug, t.title
             FROM attractions a
@@ -211,7 +280,8 @@ function searchSuggestions($query, $lang = 'ru') {
 /**
  * Нечёткий поиск достопримечательностей
  */
-function fuzzySearchAttractions($query, $lang = 'ru', $maxDistance = 3) {
+function fuzzySearchAttractions($query, $lang = 'ru', $maxDistance = 3)
+{
     global $pdo;
     $sql = "SELECT a.id, a.slug, t.title
             FROM attractions a
@@ -242,12 +312,42 @@ function fuzzySearchAttractions($query, $lang = 'ru', $maxDistance = 3) {
 /**
  * Транслитерация русского текста в латиницу (упрощённая)
  */
-function rus2lat($text) {
+function rus2lat($text)
+{
     $trans = [
-        'а'=>'a','б'=>'b','в'=>'v','г'=>'g','д'=>'d','е'=>'e','ё'=>'yo','ж'=>'zh','з'=>'z','и'=>'i',
-        'й'=>'y','к'=>'k','л'=>'l','м'=>'m','н'=>'n','о'=>'o','п'=>'p','р'=>'r','с'=>'s','т'=>'t',
-        'у'=>'u','ф'=>'f','х'=>'h','ц'=>'ts','ч'=>'ch','ш'=>'sh','щ'=>'sch','ъ'=>'','ы'=>'y','ь'=>'',
-        'э'=>'e','ю'=>'yu','я'=>'ya'
+        'а' => 'a',
+        'б' => 'b',
+        'в' => 'v',
+        'г' => 'g',
+        'д' => 'd',
+        'е' => 'e',
+        'ё' => 'yo',
+        'ж' => 'zh',
+        'з' => 'z',
+        'и' => 'i',
+        'й' => 'y',
+        'к' => 'k',
+        'л' => 'l',
+        'м' => 'm',
+        'н' => 'n',
+        'о' => 'o',
+        'п' => 'p',
+        'р' => 'r',
+        'с' => 's',
+        'т' => 't',
+        'у' => 'u',
+        'ф' => 'f',
+        'х' => 'h',
+        'ц' => 'ts',
+        'ч' => 'ch',
+        'ш' => 'sh',
+        'щ' => 'sch',
+        'ъ' => '',
+        'ы' => 'y',
+        'ь' => '',
+        'э' => 'e',
+        'ю' => 'yu',
+        'я' => 'ya'
     ];
     $text = mb_strtolower($text);
     return strtr($text, $trans);
@@ -256,12 +356,23 @@ function rus2lat($text) {
 /**
  * Русский метафон (упрощённый фонетический код)
  */
-function russianMetaphone($word) {
+function russianMetaphone($word)
+{
     $word = mb_strtolower($word);
     // Заменяем похожие звуки
     $replacements = [
-        'дж'=>'ж','дч'=>'ч','тс'=>'ц','тц'=>'ц','сч'=>'щ','зч'=>'щ','зд'=>'ст',
-        'о'=>'а','е'=>'и','ё'=>'о','ю'=>'у','я'=>'а'
+        'дж' => 'ж',
+        'дч' => 'ч',
+        'тс' => 'ц',
+        'тц' => 'ц',
+        'сч' => 'щ',
+        'зч' => 'щ',
+        'зд' => 'ст',
+        'о' => 'а',
+        'е' => 'и',
+        'ё' => 'о',
+        'ю' => 'у',
+        'я' => 'а'
     ];
     foreach ($replacements as $from => $to) {
         $word = str_replace($from, $to, $word);
@@ -275,7 +386,8 @@ function russianMetaphone($word) {
 /**
  * Разбиение строки на триграммы
  */
-function trigrams($str) {
+function trigrams($str)
+{
     $str = mb_strtolower($str);
     $trigrams = [];
     $len = mb_strlen($str);
@@ -288,7 +400,8 @@ function trigrams($str) {
 /**
  * Коэффициент сходства на основе триграмм
  */
-function trigramSimilarity($str1, $str2) {
+function trigramSimilarity($str1, $str2)
+{
     $tri1 = trigrams($str1);
     $tri2 = trigrams($str2);
     if (empty($tri1) || empty($tri2)) return 0;
@@ -299,7 +412,8 @@ function trigramSimilarity($str1, $str2) {
 /**
  * Продвинутый нечёткий поиск достопримечательностей
  */
-function advancedFuzzySearch($query, $lang = 'ru', $limit = 10) {
+function advancedFuzzySearch($query, $lang = 'ru', $limit = 10)
+{
     global $pdo;
     $sql = "SELECT a.id, a.slug, t.title
             FROM attractions a
@@ -359,14 +473,15 @@ function advancedFuzzySearch($query, $lang = 'ru', $limit = 10) {
     }
 
     // Сортировка по убыванию релевантности
-    usort($scored, function($a, $b) {
+    usort($scored, function ($a, $b) {
         return $b['score'] <=> $a['score'];
     });
 
     return array_slice($scored, 0, $limit);
 }
 
-function getAllRoutes($lang = null) {
+function getAllRoutes($lang = null)
+{
     global $pdo;
     if (!$lang) $lang = $_SESSION['lang'] ?? 'ru';
     $sql = "SELECT r.id, r.slug, r.distance, r.duration, r.stops_count, r.is_popular,
@@ -379,7 +494,8 @@ function getAllRoutes($lang = null) {
     return $stmt->fetchAll();
 }
 
-function getRouteBySlug($slug, $lang = null) {
+function getRouteBySlug($slug, $lang = null)
+{
     global $pdo;
     if (!$lang) $lang = $_SESSION['lang'] ?? 'ru';
     $sql = "SELECT r.*, rt.title, rt.short_description, rt.full_description
@@ -391,7 +507,8 @@ function getRouteBySlug($slug, $lang = null) {
     return $stmt->fetch();
 }
 
-function getRouteStops($route_id, $lang = null) {
+function getRouteStops($route_id, $lang = null)
+{
     global $pdo;
     if (!$lang) $lang = $_SESSION['lang'] ?? 'ru';
 
@@ -410,7 +527,8 @@ function getRouteStops($route_id, $lang = null) {
     return $stmt->fetchAll();
 }
 
-function getRouteRecommendations($route_id, $type = null) {
+function getRouteRecommendations($route_id, $type = null)
+{
     global $pdo;
     $sql = "SELECT * FROM route_recommendations WHERE route_id = ?";
     if ($type) {
@@ -424,7 +542,8 @@ function getRouteRecommendations($route_id, $type = null) {
     return $stmt->fetchAll();
 }
 
-function getFilteredAttractionsPaginated($category_id = null, $search = '', $limit = 9, $offset = 0, $lang = null) {
+function getFilteredAttractionsPaginated($category_id = null, $search = '', $limit = 9, $offset = 0, $lang = null)
+{
     global $pdo;
     if (!$lang) $lang = $_SESSION['lang'] ?? 'ru';
 
@@ -454,4 +573,65 @@ function getFilteredAttractionsPaginated($category_id = null, $search = '', $lim
     return $stmt->fetchAll();
 }
 
+function getArticles($limit = 3, $offset = 0, $lang = null)
+{
+    global $pdo;
+    if (!$lang) $lang = $_SESSION['lang'] ?? 'ru';
+    $sql = "SELECT a.id, a.slug, a.image, a.created_at,
+                   t.title, t.short_description
+            FROM articles a
+            JOIN article_translations t ON a.id = t.article_id AND t.language_code = ?
+            WHERE a.is_published = 1
+            ORDER BY a.created_at DESC
+            LIMIT ? OFFSET ?";
+    $stmt = $pdo->prepare($sql);
+    $stmt->bindValue(1, $lang, PDO::PARAM_STR);
+    $stmt->bindValue(2, (int)$limit, PDO::PARAM_INT);
+    $stmt->bindValue(3, (int)$offset, PDO::PARAM_INT);
+    $stmt->execute();
+    return $stmt->fetchAll();
+}
 
+function getArticleBySlug($slug, $lang = null)
+{
+    global $pdo;
+    if (!$lang) $lang = $_SESSION['lang'] ?? 'ru';
+    $sql = "SELECT a.*, t.title, t.short_description, t.full_content
+            FROM articles a
+            JOIN article_translations t ON a.id = t.article_id AND t.language_code = ?
+            WHERE a.slug = ?";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$lang, $slug]);
+    return $stmt->fetch();
+}
+
+function getTotalArticles()
+{
+    global $pdo;
+    return $pdo->query("SELECT COUNT(*) FROM articles WHERE is_published = 1")->fetchColumn();
+}
+
+function getAllArticlesAdmin()
+{
+    global $pdo;
+    $sql = "SELECT a.id, a.slug, a.is_published, a.created_at,
+                   MAX(CASE WHEN t.language_code = 'ru' THEN t.title END) as title_ru,
+                   MAX(CASE WHEN t.language_code = 'en' THEN t.title END) as title_en
+            FROM articles a
+            LEFT JOIN article_translations t ON a.id = t.article_id
+            GROUP BY a.id
+            ORDER BY a.created_at DESC";
+    return $pdo->query($sql)->fetchAll();
+}
+
+function getArticleTranslations($article_id)
+{
+    global $pdo;
+    $stmt = $pdo->prepare("SELECT * FROM article_translations WHERE article_id = ?");
+    $stmt->execute([$article_id]);
+    $result = [];
+    while ($row = $stmt->fetch()) {
+        $result[$row['language_code']] = $row;
+    }
+    return $result;
+}

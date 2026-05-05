@@ -39,8 +39,8 @@ if (file_exists($lang_file)) {
     $messages = [];
 }
 
-function __($key) {
+function __($key)
+{
     global $messages;
     return $messages[$key] ?? $key;
 }
-?>

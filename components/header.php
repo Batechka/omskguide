@@ -1,24 +1,38 @@
 <?php
-// Ожидается, что переменная $lang определена в вызывающем файле
-// Для страниц с ЧПУ (достопримечательности, маршруты) нужно передать $slugForLang
-$slugParam = isset($slugForLang) && $slugForLang ? '&slug=' . urlencode($slugForLang) : '';
+$currentLang = $lang ?? 'ru';
+$otherLang = $currentLang === 'ru' ? 'en' : 'ru';
+
+// БЕРЕМ ТОЛЬКО PATH (без ?lang= и мусора)
+$cleanPath = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
+
+// удаляем языковой префикс
+$cleanPath = preg_replace('#^(ru|en)(/|$)#', '', $cleanPath);
+
+// защита от index.php
+if ($cleanPath === 'index.php') {
+    $cleanPath = '';
+}
 ?>
 <header class="site-header">
     <div class="container header-inner">
-        <a href="<?= BASE_URL ?>" class="site-title">
+        <a href="/<?= $currentLang ?>/" class="site-title">
             <span>Омскъ</span> Исторический
         </a>
         <div class="nav-links">
-            <a href="<?= BASE_URL ?>" class="nav-link"><?= __('home') ?></a>
-            <a href="<?= BASE_URL ?>kuda-shodit-v-omske" class="nav-link"><?= $lang == 'ru' ? 'Маршруты' : 'Routes' ?></a>
-            <a href="<?= BASE_URL ?>about" class="nav-link"><?= $lang == 'ru' ? 'О проекте' : 'About' ?></a>
+            <a href="/<?= $currentLang ?>/" class="nav-link"><?= __('home') ?></a>
+            <a href="/<?= $currentLang ?>/kuda-shodit-v-omske" class="nav-link"><?= $currentLang == 'ru' ? 'Маршруты' : 'Routes' ?></a>
+            <a href="/<?= $currentLang ?>/about" class="nav-link"><?= $currentLang == 'ru' ? 'О проекте' : 'About' ?></a>
+            <a href="/<?= $currentLang ?>/articles" class="nav-link"><?= $currentLang == 'ru' ? 'Статьи' : 'Articles' ?></a>
             <?php if (isset($_SESSION['admin_logged_in'])): ?>
-                <a href="<?= BASE_URL ?>admin/" class="nav-link">Админка</a>
-                <a href="<?= BASE_URL ?>admin/logout.php" class="nav-link">Выход</a>
+                <a href="/<?= $currentLang ?>/admin/" class="nav-link">Админка</a>
+                <a href="/<?= $currentLang ?>/admin/logout.php" class="nav-link">Выход</a>
             <?php endif; ?>
             <div class="lang-switch">
-                <a href="?lang=ru<?= $slugParam ?>" class="lang-btn <?= $lang=='ru'?'active':'' ?>">RU</a>
-                <a href="?lang=en<?= $slugParam ?>" class="lang-btn <?= $lang=='en'?'active':'' ?>">EN</a>
+                <a href="/ru<?= $cleanPath ? '/' . $cleanPath : '' ?>"
+                    class="lang-btn <?= $currentLang == 'ru' ? 'active' : '' ?>">RU</a>
+
+                <a href="/en<?= $cleanPath ? '/' . $cleanPath : '' ?>"
+                    class="lang-btn <?= $currentLang == 'en' ? 'active' : '' ?>">EN</a>
             </div>
             <div class="accessibility-controls">
                 <button class="theme-toggle" data-theme="light" title="Светлая тема">☀️</button>
@@ -31,18 +45,16 @@ $slugParam = isset($slugForLang) && $slugForLang ? '&slug=' . urlencode($slugFor
 </header>
 
 <script>
-let lastScrollTop = 0;
-const header = document.querySelector('.site-header');
+    let lastScrollTop = 0;
+    const header = document.querySelector('.site-header');
 
-window.addEventListener('scroll', function() {
-    let scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-    if (scrollTop > lastScrollTop) {
-        // скролл вниз → прячем шапку
-        header.classList.add('hidden');
-    } else {
-        // скролл вверх → показываем шапку
-        header.classList.remove('hidden');
-    }
-    lastScrollTop = scrollTop <= 0 ? 0 : scrollTop; // для мобильных
-});
+    window.addEventListener('scroll', function() {
+        let scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        if (scrollTop > lastScrollTop) {
+            header.classList.add('hidden');
+        } else {
+            header.classList.remove('hidden');
+        }
+        lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
+    });
 </script>

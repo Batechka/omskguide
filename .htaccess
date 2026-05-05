@@ -1,15 +1,30 @@
 DirectoryIndex index.php
-
 RewriteEngine On
-RewriteBase /omsk
+RewriteBase /
 
-# Не переписывать реальные файлы
+# НЕ переписывать index.php
+RewriteRule ^index\.php$ - [L]
+
+# НЕ трогаем реальные файлы и папки
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Корень без языка → /ru/
+RewriteRule ^$ ru/ [R=301,L]
+
+# /ru → /ru/ и /en → /en/
+RewriteRule ^(ru|en)$ $1/ [R=301,L]
+
+# Убираем index.php из языковых URL
+RewriteRule ^ru/index\.php$ ru/ [R=301,L]
+RewriteRule ^en/index\.php$ en/ [R=301,L]
+
+# ★★★ ФРОНТ-КОНТРОЛЛЕР ★★★
+RewriteRule ^(ru|en)/?(.*)$ index.php?lang=$1&route=$2 [QSA,L]
+
+# Все остальные страницы без языка → /ru/…
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-
-# Все запросы → index.php
-RewriteRule ^(.*)$ index.php?url=$1 [QSA,L]
-
-# Старые ссылки attraction.php?slug=
-RewriteCond %{QUERY_STRING} ^slug=([^&]+)$
-RewriteRule ^attraction\.php$ /%1? [R=301,L]
+RewriteCond %{REQUEST_URI} !^/(ru|en)/
+RewriteRule ^(.*)$ ru/$1 [R=301,L]

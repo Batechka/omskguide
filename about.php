@@ -8,6 +8,7 @@ $siteName = __('site_title');
 ?>
 <!DOCTYPE html>
 <html lang="<?= $lang ?>">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -20,16 +21,18 @@ $siteName = __('site_title');
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
     <!-- Стили -->
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/about.css">
-    <link rel="stylesheet" href="css/hlebnikrosh.css">
+
+    <link rel="stylesheet" href="<?= BASE_URL ?>css/style.css">
+    <link rel="stylesheet" href="<?= BASE_URL ?>css/about.css">
+    <link rel="stylesheet" href="<?= BASE_URL ?>css/hlebnikrosh.css">
     <link rel="canonical" href="https://omskguide.ru/about">
     <?php include 'includes/metrica.php'; ?>
 </head>
+
 <body>
     <?php
-        $slugForLang = '';
-        include 'components/header.php';
+    $slugForLang = '';
+    include 'components/header.php';
     ?>
 
     <main class="container">
@@ -37,11 +40,11 @@ $siteName = __('site_title');
 
         <article class="about-page">
             <h1><?= $pageTitle ?></h1>
-                    <!-- Хлебные крошки -->
-        <div class="breadcrumbs">
-            <a href="<?= BASE_URL ?>"><?= __('home') ?></a> /
-            <span><?= $pageTitle ?></span>
-        </div>
+            <!-- Хлебные крошки -->
+            <div class="breadcrumbs">
+                <a href="<?= BASE_URL ?>"><?= __('home') ?></a> /
+                <span><?= $pageTitle ?></span>
+            </div>
             <div class="about-content">
                 <?php if ($lang == 'ru'): ?>
                     <section class="about-section">
@@ -70,7 +73,7 @@ $siteName = __('site_title');
                     <section class="about-section">
                         <h2>Контакты</h2>
                         <p>Email: <a href="ko3ovka@mail.ru">ko3ovka@mail.ru</a><br>
-                        ВКонтакте: <a href="https://vk.com/omskguide" target="_blank" rel="noopener">пока не работает!</a></p>
+                            ВКонтакте: <a href="https://vk.com/omskguide" target="_blank" rel="noopener">пока не работает!</a></p>
                         <p>Мы всегда рады обратной связи!</p>
                     </section>
                 <?php else: ?>
@@ -99,8 +102,8 @@ $siteName = __('site_title');
 
                     <section class="about-section">
                         <h2>Contacts</h2>
-                        <p>Email: <a href="mailto:info@omskguide.ru">info@omskguide.ru</a><br>
-                        VKontakte: <a href="" target="_blank" rel="noopener">@omskguide</a></p>
+                        <p>Email: <a href="mailto:ko3ovka@mail.ru"><br>
+                                VKontakte: <a href="" target="_blank" rel="noopener">@omskguide</a></p>
                         <p>We always welcome feedback!</p>
                         <!-- Мой телефон -->
                         <p>Мой телефон: <a href="tel:+79131234567">+7 (995) 848-56-45</a></p>
@@ -138,6 +141,7 @@ $siteName = __('site_title');
 
             const html = document.documentElement;
             let fontSizeLevel = parseInt(localStorage.getItem('fontSizeLevel')) || 0;
+
             function applyFontSize() {
                 html.classList.remove('font-size-large', 'font-size-extra-large');
                 if (fontSizeLevel === 1) html.classList.add('font-size-large');
@@ -158,4 +162,5 @@ $siteName = __('site_title');
         })();
     </script>
 </body>
+
 </html>
